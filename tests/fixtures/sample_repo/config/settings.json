@@ -1,0 +1,5 @@
+{
+  "api_key": "sk-live-hardcoded-secret-key-12345",
+  "db_password": "admin123",
+  "debug": true
+}
