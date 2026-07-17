@@ -26,10 +26,13 @@ def health():
 def analyze(body: AnalyzeRequest) -> AnalyzeResponse:
     """分析本地路径或 GitHub 仓库，返回结构 / 风险 / Bug。"""
     settings = get_settings()
-    if not settings.anthropic_api_key:
+    if not settings.has_anthropic_credentials:
         raise HTTPException(
             status_code=500,
-            detail="未配置 ANTHROPIC_API_KEY，请复制 .env.example 为 .env 并填入密钥",
+            detail=(
+                "未配置 ANTHROPIC_API_KEY 或 ANTHROPIC_AUTH_TOKEN；"
+                "中转站请同时设置 ANTHROPIC_BASE_URL 与 ANTHROPIC_MODEL"
+            ),
         )
 
     backend = None

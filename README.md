@@ -53,7 +53,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# 编辑 .env，填入 ANTHROPIC_API_KEY
+# 编辑 .env
+# 官方 API：ANTHROPIC_API_KEY=sk-ant-...
+# 中转站：ANTHROPIC_AUTH_TOKEN=... 与 ANTHROPIC_BASE_URL=https://your-gateway
+#         ANTHROPIC_MODEL=你的模型名（如 grok-4.5）
 ```
 
 可选：设置 `GITHUB_TOKEN` 以提高 GitHub API 限额或读取私有仓库。
@@ -122,8 +125,10 @@ pytest -q
 
 | 变量 | 说明 |
 |------|------|
-| `ANTHROPIC_API_KEY` | 必填 |
-| `ANTHROPIC_MODEL` | 默认 `claude-sonnet-5`，可按账号可用模型调整 |
+| `ANTHROPIC_API_KEY` | 官方密钥（与 AUTH_TOKEN 二选一） |
+| `ANTHROPIC_AUTH_TOKEN` | 中转站密钥（Claude Code 风格，与 API_KEY 二选一） |
+| `ANTHROPIC_BASE_URL` | 中转网关，如 `https://newapi.example.com`；官方则留空 |
+| `ANTHROPIC_MODEL` | 模型 ID，默认 `claude-sonnet-5`；中转可改为 `grok-4.5` 等 |
 | `GITHUB_TOKEN` | 可选 |
 | `AGENT_MAX_STEPS` | 默认 12 |
 | `AGENT_MAX_FILE_BYTES` | 单文件读取上限 |

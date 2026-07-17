@@ -1,4 +1,4 @@
-"""Anthropic Claude API 封装。"""
+"""Anthropic 兼容 API 封装（支持官方与中转 BASE_URL）。"""
 
 from __future__ import annotations
 
@@ -15,9 +15,18 @@ logger = logging.getLogger(__name__)
 class ClaudeClient:
     def __init__(self, settings: Optional[Settings] = None):
         self.settings = settings or get_settings()
-        if not self.settings.anthropic_api_key:
-            logger.warning("ANTHROPIC_API_KEY 未设置，调用 Claude 会失败")
-        self._client = Anthropic(api_key=self.settings.anthropic_api_key or "missing")
+        api_key = self.settings.anthropic_api_key or self.settings.anthropic_auth_token
+        if not api_key:
+            logger.warning("未设置 ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN，调用会失败")
+
+        client_kwargs: Dict[str, Any] = {
+            "api_key": api_key or "missing",
+        }
+        if self.settings.anthropic_base_url:
+            client_kwargs["base_url"] = self.settings.anthropic_base_url
+            logger.info("使用自定义 Anthropic BASE_URL: %s", self.settings.anthropic_base_url)
+
+        self._client = Anthropic(**client_kwargs)
         self.model = self.settings.anthropic_model
 
     def create_message(
@@ -36,5 +45,11 @@ class ClaudeClient:
         }
         if tools:
             kwargs["tools"] = tools
-        logger.info("Claude request model=%s messages=%d tools=%d", self.model, len(messages), len(tools))
+        logger.info(
+            "LLM request model=%s base_url=%s messages=%d tools=%d",
+            self.model,
+            self.settings.anthropic_base_url or "default(api.anthropic.com)",
+            len(messages),
+            len(tools),
+        )
         return self._client.messages.create(**kwargs)

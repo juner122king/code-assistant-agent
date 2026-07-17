@@ -23,25 +23,34 @@ from app.tools.registry import ToolRegistry, build_default_registry
 logger = logging.getLogger(__name__)
 
 
+def _block_get(block: Any, key: str, default: Any = None) -> Any:
+    """兼容 SDK 对象与 dict 两种 content block。"""
+    if isinstance(block, dict):
+        return block.get(key, default)
+    return getattr(block, key, default)
+
+
 def _content_blocks_to_api(content: Any) -> List[Dict[str, Any]]:
     """把 SDK 返回的 content blocks 转成可序列化 messages 格式。"""
     blocks: List[Dict[str, Any]] = []
     for block in content:
-        btype = getattr(block, "type", None) or block.get("type")
+        btype = _block_get(block, "type")
         if btype == "text":
-            text = getattr(block, "text", None) or block.get("text", "")
-            blocks.append({"type": "text", "text": text})
+            blocks.append({"type": "text", "text": _block_get(block, "text", "") or ""})
         elif btype == "tool_use":
+            tool_input = _block_get(block, "input")
+            if tool_input is None:
+                tool_input = {}
             blocks.append(
                 {
                     "type": "tool_use",
-                    "id": getattr(block, "id", None) or block.get("id"),
-                    "name": getattr(block, "name", None) or block.get("name"),
-                    "input": getattr(block, "input", None) or block.get("input") or {},
+                    "id": _block_get(block, "id"),
+                    "name": _block_get(block, "name"),
+                    "input": tool_input,
                 }
             )
         else:
-            # 忽略 thinking 等其它块，或尽量透传
+            # 忽略 thinking 等其它块
             logger.debug("skip content block type=%s", btype)
     return blocks
 
@@ -49,22 +58,23 @@ def _content_blocks_to_api(content: Any) -> List[Dict[str, Any]]:
 def _extract_text(content: Any) -> str:
     parts: List[str] = []
     for block in content:
-        btype = getattr(block, "type", None) or (block.get("type") if isinstance(block, dict) else None)
-        if btype == "text":
-            parts.append(getattr(block, "text", None) or block.get("text", ""))
+        if _block_get(block, "type") == "text":
+            parts.append(_block_get(block, "text", "") or "")
     return "\n".join(parts).strip()
 
 
 def _extract_tool_uses(content: Any) -> List[Dict[str, Any]]:
     tools: List[Dict[str, Any]] = []
     for block in content:
-        btype = getattr(block, "type", None) or (block.get("type") if isinstance(block, dict) else None)
-        if btype == "tool_use":
+        if _block_get(block, "type") == "tool_use":
+            tool_input = _block_get(block, "input")
+            if tool_input is None:
+                tool_input = {}
             tools.append(
                 {
-                    "id": getattr(block, "id", None) or block.get("id"),
-                    "name": getattr(block, "name", None) or block.get("name"),
-                    "input": getattr(block, "input", None) or block.get("input") or {},
+                    "id": _block_get(block, "id"),
+                    "name": _block_get(block, "name"),
+                    "input": tool_input,
                 }
             )
     return tools
