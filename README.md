@@ -40,12 +40,13 @@ POST /analyze { repo }
 | `app/repo/*` | 本地文件系统 / GitHub API 统一后端 |
 | `app/llm/claude_client.py` | Claude API 封装 |
 | `app/api/routes.py` | FastAPI HTTP 接口 |
+| `frontend/` | Vue 3 + Vite 分析表单与报告 UI |
 
 ## 快速开始
 
 ### 1. 环境
 
-需要 Python 3.9+。
+需要 **Python 3.9+**。前端构建需要 **Node.js 18+**。
 
 ```bash
 cd code-assistant-agent
@@ -61,7 +62,7 @@ cp .env.example .env
 
 可选：设置 `GITHUB_TOKEN` 以提高 GitHub API 限额或读取私有仓库。
 
-### 2. 启动服务
+### 2. 启动后端
 
 ```bash
 # 在项目根目录
@@ -69,9 +70,44 @@ export PYTHONPATH=.
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-打开文档：http://127.0.0.1:8000/docs
+- API 文档：http://127.0.0.1:8000/docs  
+- 健康检查：http://127.0.0.1:8000/health  
 
-### 3. 调用分析
+### 3. 前端 UI（Vue 3 + Vite）
+
+#### 开发模式（热更新 + 代理）
+
+终端 1 保持 uvicorn 运行，终端 2：
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+打开 http://127.0.0.1:5173 。Vite 会把 `/analyze`、`/health` 代理到 `8000`。
+
+#### 生产模式（同源单端口）
+
+```bash
+cd frontend
+npm install
+npm run build
+# 生成 frontend/dist/
+
+# 回到项目根，启动（或重启）uvicorn
+export PYTHONPATH=.
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+打开 http://127.0.0.1:8000/ 即可使用 UI（FastAPI 托管静态 SPA）。  
+未执行 `npm run build` 时，`GET /` 返回 JSON 提示如何构建前端。
+
+> **说明：** 表单中的「本地路径」是 **运行 uvicorn 的机器** 上的路径，不是浏览器本机路径。演示可用仓库内 `tests/fixtures/sample_repo` 的绝对路径，或 GitHub URL。
+
+分析可能经历多步工具调用（默认最多 12 步），前端请求超时约 10 分钟，请耐心等待。
+
+### 4. 调用分析（curl）
 
 **本地仓库（内置有问题的示例）：**
 
@@ -117,7 +153,7 @@ pytest -q
    `AGENT_MAX_STEPS`、文件字节上限、树条目上限、本地路径沙箱（防 `../` 逃逸）。
 
 4. **MVP 边界**  
-   当前只做「读 + 分析报告」。后续可扩展：流式输出、自动修代码、开 PR、多 Agent 分工。
+   当前只做「读 + 分析报告」与简易 Web UI。后续可扩展：流式输出、自动修代码、开 PR、多 Agent 分工。
 
 ## 环境变量
 
@@ -139,14 +175,21 @@ pytest -q
 ```
 code-assistant-agent/
 ├── app/
-│   ├── main.py
+│   ├── main.py           # FastAPI 入口 + 可选托管 frontend/dist
 │   ├── config.py
 │   ├── api/routes.py
-│   ├── agent/          # loop / prompts / session
-│   ├── tools/          # registry + 4 个 MVP tools
-│   ├── repo/           # local + github
-│   ├── llm/            # Claude client
-│   └── models/         # 请求/响应 Pydantic
+│   ├── agent/            # loop / prompts / session
+│   ├── tools/            # registry + 4 个 MVP tools
+│   ├── repo/             # local + github
+│   ├── llm/              # Claude client
+│   └── models/           # 请求/响应 Pydantic
+├── frontend/             # Vue 3 + Vite UI
+│   ├── src/
+│   │   ├── App.vue
+│   │   ├── api/analyze.js
+│   │   └── components/
+│   ├── package.json
+│   └── vite.config.js    # dev 代理到 :8000
 ├── tests/
 │   ├── fixtures/sample_repo/   # 故意有漏洞的示例仓
 │   └── test_*.py
