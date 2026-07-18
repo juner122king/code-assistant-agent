@@ -164,3 +164,23 @@ class LocalFsBackend(RepoBackend):
                 if len(hits) >= max_hits:
                     break
         return hits
+
+    def write_file(self, path: str, content: str) -> None:
+        """写入 UTF-8 文本；自动创建父目录；路径必须在 root 内。
+
+        使用 write_bytes，避免 Windows 文本模式把 \\n 转成 \\r\\n。
+        """
+        target = self._safe_join(path)
+        if target.exists() and target.is_dir():
+            raise IsADirectoryError(f"目标是目录，无法写入文件: {path}")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        data = (content if content is not None else "").encode("utf-8")
+        target.write_bytes(data)
+
+    def delete_file(self, path: str) -> None:
+        target = self._safe_join(path)
+        if not target.exists():
+            return
+        if target.is_dir():
+            raise IsADirectoryError(f"目标是目录，无法删除: {path}")
+        target.unlink()

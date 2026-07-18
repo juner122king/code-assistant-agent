@@ -1,9 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { analyzeRepoStream, checkHealth } from './api/analyze'
+import { proposeFixStream } from './api/fix'
 import AnalyzeForm from './components/AnalyzeForm.vue'
 import AnalysisProgress from './components/AnalysisProgress.vue'
 import ErrorBanner from './components/ErrorBanner.vue'
+import FixPreviewPanel from './components/FixPreviewPanel.vue'
 import ReportView from './components/ReportView.vue'
 
 // 使用 ref 才能让 v-model 整对象替换生效（reactive + 重赋值会静默失败）
@@ -17,6 +19,13 @@ const loading = ref(false)
 const error = ref('')
 const report = ref(null)
 const backendOk = ref(null)
+
+/** 修复提案状态 */
+const fixLoading = ref(false)
+const fixProposal = ref(null)
+const fixProgressMsg = ref('')
+const fixingIndex = ref(null)
+const fixError = ref('')
 
 /** 过程面板状态 */
 const progress = ref(createEmptyProgress())
@@ -183,6 +192,9 @@ async function onSubmit() {
   if (loading.value) return
   error.value = ''
   report.value = null
+  fixProposal.value = null
+  fixError.value = ''
+  fixingIndex.value = null
   itemSeq = 0
   progress.value = createEmptyProgress()
   progress.value.startedAt = Date.now()
@@ -224,6 +236,76 @@ async function onSubmit() {
     loading.value = false
   }
 }
+
+function handleFixEvent(type, data) {
+  if (type === 'step' || type === 'status') {
+    fixProgressMsg.value = data?.message || fixProgressMsg.value
+  } else if (type === 'tool' && data?.status === 'running') {
+    fixProgressMsg.value = `调用工具 ${data.name || ''}…`
+  } else if (type === 'start') {
+    fixProgressMsg.value = '修复 Agent 已启动…'
+  }
+}
+
+async function onProposeFix({ item, index }) {
+  if (fixLoading.value || loading.value) return
+  const repo = form.value.repo || report.value?.repo
+  if (!repo) {
+    fixError.value = '缺少仓库路径，请重新分析。'
+    return
+  }
+
+  fixLoading.value = true
+  fixProposal.value = null
+  fixError.value = ''
+  fixingIndex.value = index
+  fixProgressMsg.value = '正在生成修复提案…'
+
+  try {
+    const proposal = await proposeFixStream(
+      {
+        repo,
+        branch: form.value.branch || undefined,
+        bug: {
+          title: item.title || '未命名',
+          severity: item.severity || 'medium',
+          location: item.location || '',
+          evidence: item.evidence || '',
+          suggestion: item.suggestion || '',
+        },
+      },
+      { onEvent: handleFixEvent },
+    )
+    fixProposal.value = proposal
+    // 滚动到预览
+    requestAnimationFrame(() => {
+      document.getElementById('fix-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  } catch (err) {
+    fixError.value = err?.message || String(err)
+  } finally {
+    fixLoading.value = false
+    fixingIndex.value = null
+  }
+}
+
+function onFixApplied(res) {
+  if (fixProposal.value) {
+    fixProposal.value = { ...fixProposal.value, applied: true }
+  }
+  if (res?.conflicts?.length) {
+    fixError.value = `部分冲突: ${res.conflicts.join('; ')}`
+  }
+}
+
+function onPrOpened(res) {
+  if (fixProposal.value) {
+    fixProposal.value = { ...fixProposal.value, applied: true }
+  }
+  if (res?.pr_url) {
+    fixError.value = ''
+  }
+}
 </script>
 
 <template>
@@ -260,19 +342,40 @@ async function onSubmit() {
       />
 
       <ErrorBanner v-if="error && !loading" :message="error" @dismiss="error = ''" />
-      <ReportView v-if="report && !loading" :report="report" />
+      <ErrorBanner v-if="fixError && !fixLoading" :message="fixError" @dismiss="fixError = ''" />
+
+      <ReportView
+        v-if="report && !loading"
+        :report="report"
+        :fixing-index="fixingIndex"
+        @propose-fix="onProposeFix"
+      />
+
+      <div id="fix-preview">
+        <FixPreviewPanel
+          v-if="fixLoading || fixProposal"
+          :proposal="fixProposal"
+          :loading="fixLoading"
+          :progress-message="fixProgressMsg"
+          @close="fixProposal = null; fixLoading = false"
+          @applied="onFixApplied"
+          @pr-opened="onPrOpened"
+          @error="(m) => (fixError = m)"
+        />
+      </div>
 
       <section v-if="!loading && !report && !error" class="card empty">
         <h2 class="card-title">等待分析</h2>
         <p class="empty-hint">
           提交后将通过 <code>POST /analyze/stream</code> 实时展示 Agent 步骤与工具调用。
           也可在 <a href="/docs" target="_blank" rel="noreferrer">/docs</a> 使用 Swagger。
+          分析完成后可在 Bug 列表中「生成修复」→ 预览 diff → 应用到本地或提交 PR。
         </p>
       </section>
     </main>
 
     <footer class="footer">
-      <span>MVP：读 + 分析报告 · 过程流式展示 · 非聊天 UI</span>
+      <span>分析 + 修复提案 · 先审后写 · 本地 apply / GitHub PR</span>
     </footer>
   </div>
 </template>

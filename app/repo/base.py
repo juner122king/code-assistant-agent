@@ -72,3 +72,11 @@ class RepoBackend(ABC):
     def search(self, pattern: str, max_hits: int = 20) -> List[str]:
         """按路径/文件名子串匹配（轻量）。"""
         ...
+
+    def write_file(self, path: str, content: str) -> None:
+        """写入相对路径文件。默认只读后端不支持。"""
+        raise NotImplementedError(f"{type(self).__name__} 不支持 write_file")
+
+    def delete_file(self, path: str) -> None:
+        """删除相对路径文件。默认只读后端不支持。"""
+        raise NotImplementedError(f"{type(self).__name__} 不支持 delete_file")

@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     agent_max_tree_entries: int = 200
     agent_max_tokens: int = 8192
 
+    # Fix / PR 流程
+    fix_proposal_ttl_seconds: int = 1800
+    fix_max_steps: int = 10
+    fix_max_files: int = 8
+
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "INFO"

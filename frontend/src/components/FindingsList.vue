@@ -25,7 +25,18 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  /** 是否显示「生成修复」按钮（仅 bug） */
+  enableFix: {
+    type: Boolean,
+    default: false,
+  },
+  fixingIndex: {
+    type: [Number, null],
+    default: null,
+  },
 })
+
+const emit = defineEmits(['propose-fix'])
 
 const filter = ref('all')
 const collapsed = ref({})
@@ -65,6 +76,10 @@ const filterOptions = [
 function countFor(sev) {
   if (sev === 'all') return props.items?.length || 0
   return (props.items || []).filter((i) => severityClass(i.severity) === sev).length
+}
+
+function onProposeFix(item, index) {
+  emit('propose-fix', { item, index })
 }
 </script>
 
@@ -154,6 +169,17 @@ function countFor(sev) {
           >
             <div class="block-label">修复建议</div>
             <p class="block-text">{{ item.suggestion }}</p>
+          </div>
+
+          <div v-if="kind === 'bug' && enableFix" class="fix-actions">
+            <button
+              type="button"
+              class="fix-btn"
+              :disabled="fixingIndex === index"
+              @click="onProposeFix(item, index)"
+            >
+              {{ fixingIndex === index ? '生成中…' : '生成修复' }}
+            </button>
           </div>
         </div>
       </article>
@@ -427,5 +453,31 @@ function countFor(sev) {
   line-height: 1.55;
   white-space: pre-wrap;
   color: var(--text);
+}
+
+.fix-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.fix-btn {
+  border: 1px solid #bfdbfe;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.fix-btn:hover:not(:disabled) {
+  background: #dbeafe;
+}
+
+.fix-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

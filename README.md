@@ -76,6 +76,11 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - **流式分析（推荐 UI）**：`POST /analyze/stream`（SSE）  
   - 事件：`start` / `step` / `tool` / `status` / `done` / `error`  
   - 前端开发模式会实时展示 Agent 步骤与工具调用时间线  
+- **从 Bug 修复**：  
+  - `POST /fix/propose` / `POST /fix/propose/stream` — 生成 diff 提案（不落盘）  
+  - `POST /fix/apply` — 确认后写入本地路径  
+  - `POST /fix/open-pr` — 确认后经 GitHub API 建分支并开 PR（需 `GITHUB_TOKEN`）  
+  - `GET /fix/{fix_id}` — 查询未过期提案  
 
 ### 3. 前端 UI（Vue 3 + Vite）
 
@@ -156,8 +161,9 @@ pytest -q
 3. **护栏**  
    `AGENT_MAX_STEPS`、文件字节上限、树条目上限、本地路径沙箱（防 `../` 逃逸）。
 
-4. **MVP 边界**  
-   当前只做「读 + 分析报告」与简易 Web UI。后续可扩展：流式输出、自动修代码、开 PR、多 Agent 分工。
+4. **修复流程（先审后写）**  
+   Bug 列表 → `POST /fix/propose`（只读生成 patch）→ 用户确认 →  
+   本地 `POST /fix/apply` 或 GitHub `POST /fix/open-pr`（API 无 clone）。
 
 ## 环境变量
 

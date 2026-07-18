@@ -5,6 +5,8 @@ from __future__ import annotations
 import base64
 import logging
 import re
+import time
+import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -245,3 +247,154 @@ class GitHubBackend(RepoBackend):
                 if len(hits) >= max_hits:
                     break
         return hits
+
+    def _post(self, path: str, json_body: Dict[str, Any]) -> Any:
+        resp = self._client.post(path, json=json_body)
+        if resp.status_code == 403:
+            raise PermissionError(
+                f"GitHub API 拒绝写入 (检查 token 权限): {resp.text[:300]}"
+            )
+        if resp.status_code == 404:
+            raise FileNotFoundError(f"GitHub 资源不存在: {path}")
+        if resp.status_code >= 400:
+            raise RuntimeError(
+                f"GitHub API 错误 {resp.status_code}: {resp.text[:400]}"
+            )
+        if resp.status_code == 204 or not resp.content:
+            return {}
+        return resp.json()
+
+    def create_pull_request(
+        self,
+        *,
+        changes: List[Any],
+        title: str,
+        body: str = "",
+        branch_name: Optional[str] = None,
+        base_branch: Optional[str] = None,
+        commit_message: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """无 clone：blob → tree → commit → ref → pull。
+
+        changes: 含 path / action / proposed 的对象列表（如 FileChange）。
+        """
+        if not self._token:
+            raise PermissionError("创建 PR 需要 GITHUB_TOKEN")
+        if not changes:
+            raise ValueError("changes 为空")
+
+        info = self._load_repo_info()
+        base = base_branch or self.branch or info.get("default_branch") or "main"
+
+        ref = self._get(f"/repos/{self.owner}/{self.repo}/git/ref/heads/{base}")
+        base_commit_sha = ref["object"]["sha"]
+        commit = self._get(
+            f"/repos/{self.owner}/{self.repo}/git/commits/{base_commit_sha}"
+        )
+        base_tree_sha = commit["tree"]["sha"]
+
+        tree_items: List[Dict[str, Any]] = []
+        for ch in changes:
+            path = getattr(ch, "path", None) or (ch.get("path") if isinstance(ch, dict) else None)
+            action = getattr(ch, "action", None) or (
+                ch.get("action") if isinstance(ch, dict) else "modify"
+            )
+            proposed = getattr(ch, "proposed", None)
+            if proposed is None and isinstance(ch, dict):
+                proposed = ch.get("proposed") or ""
+            path = (path or "").lstrip("/").replace("\\", "/")
+            if not path or ".." in path.split("/"):
+                continue
+            action = (action or "modify").lower()
+            if action == "delete":
+                tree_items.append(
+                    {
+                        "path": path,
+                        "mode": "100644",
+                        "type": "blob",
+                        "sha": None,
+                    }
+                )
+            else:
+                blob = self._post(
+                    f"/repos/{self.owner}/{self.repo}/git/blobs",
+                    {
+                        "content": proposed or "",
+                        "encoding": "utf-8",
+                    },
+                )
+                tree_items.append(
+                    {
+                        "path": path,
+                        "mode": "100644",
+                        "type": "blob",
+                        "sha": blob["sha"],
+                    }
+                )
+
+        if not tree_items:
+            raise ValueError("没有有效的文件变更可提交")
+
+        new_tree = self._post(
+            f"/repos/{self.owner}/{self.repo}/git/trees",
+            {
+                "base_tree": base_tree_sha,
+                "tree": tree_items,
+            },
+        )
+
+        msg = commit_message or title or "fix: automated patch"
+        new_commit = self._post(
+            f"/repos/{self.owner}/{self.repo}/git/commits",
+            {
+                "message": msg,
+                "tree": new_tree["sha"],
+                "parents": [base_commit_sha],
+            },
+        )
+
+        if not branch_name:
+            slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", (title or "fix")[:40]).strip("-").lower()
+            if not slug:
+                slug = "fix"
+            branch_name = f"fix/{slug}-{uuid.uuid4().hex[:8]}"
+        # 确保分支名合法
+        branch_name = branch_name.lstrip("/").replace(" ", "-")
+
+        try:
+            self._post(
+                f"/repos/{self.owner}/{self.repo}/git/refs",
+                {
+                    "ref": f"refs/heads/{branch_name}",
+                    "sha": new_commit["sha"],
+                },
+            )
+        except RuntimeError as exc:
+            # 分支已存在时追加后缀重试一次
+            if "422" in str(exc) or "Reference already exists" in str(exc):
+                branch_name = f"{branch_name}-{int(time.time()) % 10000}"
+                self._post(
+                    f"/repos/{self.owner}/{self.repo}/git/refs",
+                    {
+                        "ref": f"refs/heads/{branch_name}",
+                        "sha": new_commit["sha"],
+                    },
+                )
+            else:
+                raise
+
+        pr = self._post(
+            f"/repos/{self.owner}/{self.repo}/pulls",
+            {
+                "title": title,
+                "head": branch_name,
+                "base": base,
+                "body": body or "",
+            },
+        )
+        return {
+            "html_url": pr.get("html_url") or "",
+            "number": pr.get("number") or 0,
+            "branch": branch_name,
+            "commit_sha": new_commit.get("sha"),
+        }

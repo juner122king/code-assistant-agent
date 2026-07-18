@@ -11,7 +11,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  fixingIndex: {
+    type: [Number, null],
+    default: null,
+  },
 })
+
+const emit = defineEmits(['propose-fix'])
 
 const activeSection = ref('overview')
 const copyState = ref('')
@@ -162,6 +168,9 @@ onUnmounted(() => {
       section-id="report-bugs"
       :items="report.bugs || []"
       empty-text="未发现明确 Bug。"
+      enable-fix
+      :fixing-index="fixingIndex"
+      @propose-fix="emit('propose-fix', $event)"
     />
 
     <ToolCallsPanel

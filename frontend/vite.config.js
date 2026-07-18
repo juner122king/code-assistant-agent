@@ -12,6 +12,11 @@ export default defineConfig({
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
+      '/fix/propose/stream': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/fix': 'http://127.0.0.1:8000',
       '/analyze': 'http://127.0.0.1:8000',
       '/health': 'http://127.0.0.1:8000',
       '/docs': 'http://127.0.0.1:8000',
