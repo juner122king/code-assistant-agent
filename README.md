@@ -72,6 +72,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 - API 文档：http://127.0.0.1:8000/docs  
 - 健康检查：http://127.0.0.1:8000/health  
+- 同步分析：`POST /analyze`  
+- **流式分析（推荐 UI）**：`POST /analyze/stream`（SSE）  
+  - 事件：`start` / `step` / `tool` / `status` / `done` / `error`  
+  - 前端开发模式会实时展示 Agent 步骤与工具调用时间线  
 
 ### 3. 前端 UI（Vue 3 + Vite）
 
@@ -85,7 +89,7 @@ npm install
 npm run dev
 ```
 
-打开 http://127.0.0.1:5173 。Vite 会把 `/analyze`、`/health` 代理到 `8000`。
+打开 http://127.0.0.1:5173 。Vite 会把 `/analyze`、`/analyze/stream`、`/health` 代理到 `8000`。
 
 #### 生产模式（同源单端口）
 

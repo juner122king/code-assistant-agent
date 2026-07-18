@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 from app.agent.prompts import SYSTEM_PROMPT, build_user_message
 from app.agent.session import AgentSession
 from app.config import Settings, get_settings
 from app.llm.claude_client import ClaudeClient
+from app.models.events import preview_text, tool_input_summary
 from app.models.responses import (
     AnalyzeResponse,
     BugItem,
@@ -21,6 +22,8 @@ from app.repo.base import RepoBackend
 from app.tools.registry import ToolRegistry, build_default_registry
 
 logger = logging.getLogger(__name__)
+
+EventCallback = Callable[[str, Dict[str, Any]], None]
 
 
 def _block_get(block: Any, key: str, default: Any = None) -> Any:
@@ -197,7 +200,27 @@ class AgentLoop:
         self.claude = claude or ClaudeClient(self.settings)
         self.registry = registry or build_default_registry()
 
-    def run(self, *, focus: str = "general") -> AnalyzeResponse:
+    def run(
+        self,
+        *,
+        focus: str = "general",
+        on_event: Optional[EventCallback] = None,
+    ) -> AnalyzeResponse:
+        """同步跑完整分析；可选 on_event(event_type, data) 接收过程事件。"""
+        result: Optional[AnalyzeResponse] = None
+        for etype, data in self.iter_run(focus=focus):
+            if etype == "done":
+                result = data  # type: ignore[assignment]
+                if on_event is not None and result is not None:
+                    on_event("done", result.model_dump())
+            elif on_event is not None:
+                on_event(etype, data)
+        if result is None:
+            raise RuntimeError("AgentLoop.iter_run 未产生 done 事件")
+        return result
+
+    def iter_run(self, *, focus: str = "general") -> Iterator[Tuple[str, Any]]:
+        """生成过程事件，最后 yield ("done", AnalyzeResponse)。"""
         meta = self.backend.meta()
         session = AgentSession(
             repo_label=meta.identifier,
@@ -215,9 +238,30 @@ class AgentLoop:
         final_text = ""
         max_steps = self.settings.agent_max_steps
 
+        yield (
+            "start",
+            {
+                "repo": meta.identifier,
+                "source": meta.source,
+                "max_steps": max_steps,
+                "focus": focus,
+                "model": self.claude.model,
+            },
+        )
+
         for step in range(1, max_steps + 1):
             session.steps = step
             logger.info("=== Agent step %d/%d ===", step, max_steps)
+
+            yield (
+                "step",
+                {
+                    "step": step,
+                    "max_steps": max_steps,
+                    "phase": "llm",
+                    "message": f"第 {step}/{max_steps} 步：调用模型…",
+                },
+            )
 
             response = self.claude.create_message(
                 messages=session.messages,
@@ -234,25 +278,82 @@ class AgentLoop:
             if not tool_uses:
                 final_text = _extract_text(response.content)
                 logger.info("Agent finished (stop_reason=%s), no more tools", stop_reason)
+                yield (
+                    "step",
+                    {
+                        "step": step,
+                        "max_steps": max_steps,
+                        "phase": "finished",
+                        "message": "模型已输出最终结论，正在整理报告…",
+                    },
+                )
                 break
+
+            yield (
+                "step",
+                {
+                    "step": step,
+                    "max_steps": max_steps,
+                    "phase": "tools",
+                    "message": f"第 {step}/{max_steps} 步：执行 {len(tool_uses)} 个工具…",
+                    "tool_count": len(tool_uses),
+                },
+            )
 
             # 执行所有 tool_use，组装 tool_result
             tool_results: List[Dict[str, Any]] = []
             for tu in tool_uses:
                 name = tu["name"]
                 tool_input = tu.get("input") or {}
+                summary = tool_input_summary(tool_input)
                 session.record_tool(name, tool_input)
                 logger.info("tool_use: %s input=%s", name, tool_input)
-                result_str = self.registry.execute(
-                    name,
-                    tool_input,
-                    self.backend,
-                    max_file_bytes=self.settings.agent_max_file_bytes,
-                    max_tree_entries=self.settings.agent_max_tree_entries,
+
+                yield (
+                    "tool",
+                    {
+                        "step": step,
+                        "name": name,
+                        "input_summary": summary,
+                        "status": "running",
+                    },
                 )
-                # 防止单次结果过大
-                if len(result_str) > 80_000:
-                    result_str = result_str[:80_000] + "\n...[tool result truncated]"
+
+                try:
+                    result_str = self.registry.execute(
+                        name,
+                        tool_input,
+                        self.backend,
+                        max_file_bytes=self.settings.agent_max_file_bytes,
+                        max_tree_entries=self.settings.agent_max_tree_entries,
+                    )
+                    # 防止单次结果过大
+                    if len(result_str) > 80_000:
+                        result_str = result_str[:80_000] + "\n...[tool result truncated]"
+                    yield (
+                        "tool",
+                        {
+                            "step": step,
+                            "name": name,
+                            "input_summary": summary,
+                            "status": "ok",
+                            "preview": preview_text(result_str),
+                        },
+                    )
+                except Exception as exc:
+                    logger.exception("tool %s failed", name)
+                    result_str = f"error: {exc}"
+                    yield (
+                        "tool",
+                        {
+                            "step": step,
+                            "name": name,
+                            "input_summary": summary,
+                            "status": "error",
+                            "preview": preview_text(str(exc)),
+                        },
+                    )
+
                 tool_results.append(
                     {
                         "type": "tool_result",
@@ -264,6 +365,12 @@ class AgentLoop:
         else:
             # 步数耗尽
             logger.warning("Agent hit max_steps=%d", max_steps)
+            yield (
+                "status",
+                {
+                    "message": f"已达最大步数 {max_steps}，尝试基于已有信息生成报告…",
+                },
+            )
             final_text = _extract_text(
                 session.messages[-1]["content"]
                 if session.messages and session.messages[-1]["role"] == "assistant"
@@ -287,6 +394,10 @@ class AgentLoop:
         if parsed is None and final_text:
             # 一次修复尝试：要求只输出 JSON
             logger.info("JSON parse failed, requesting repair")
+            yield (
+                "status",
+                {"message": "报告格式需修正，正在请求模型输出标准 JSON…"},
+            )
             try:
                 repair_messages = session.messages + [
                     {
@@ -308,8 +419,12 @@ class AgentLoop:
                 session.steps += 1
             except Exception:
                 logger.exception("JSON repair failed")
+                yield (
+                    "status",
+                    {"message": "JSON 修复失败，将返回原始文本摘要。"},
+                )
 
-        return _to_response(
+        response = _to_response(
             repo=meta.identifier,
             source=meta.source,
             data=parsed,
@@ -317,3 +432,4 @@ class AgentLoop:
             session=session,
             model=self.claude.model,
         )
+        yield ("done", response)

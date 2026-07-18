@@ -242,3 +242,17 @@ details.raw-box summary {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+
+/* —— 报告可视化增强 token —— */
+:root {
+  --report-nav-offset: 4.25rem;
+}
+
+/* 防止 sticky 导航遮挡章节标题 */
+#report-overview,
+#report-structure,
+#report-risks,
+#report-bugs,
+#report-tools {
+  scroll-margin-top: var(--report-nav-offset);
+}
