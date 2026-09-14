@@ -19,7 +19,7 @@ POST /analyze { repo }
         ▼
    AgentLoop（多步）
         │
-        ├─► Claude Messages API（tools=...）
+        ├─► LLM（Anthropic Messages 或 OpenAI chat.completions）
         │         │
         │         ▼ tool_use
         ├─► ToolRegistry.execute
@@ -38,7 +38,7 @@ POST /analyze { repo }
 | `app/agent/loop.py` | Agent 主循环（ReAct / tool-use） |
 | `app/tools/registry.py` | Tool schema 与执行分发 |
 | `app/repo/*` | 本地文件系统 / GitHub API 统一后端 |
-| `app/llm/claude_client.py` | Claude API 封装 |
+| `app/llm/` | Claude / OpenAI 兼容客户端 |
 | `app/api/routes.py` | FastAPI HTTP 接口 |
 | `frontend/` | Vue 3 + Vite 分析表单与报告 UI |
 
@@ -54,10 +54,11 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# 编辑 .env
-# 官方 API：ANTHROPIC_API_KEY=sk-ant-...
-# 中转站：ANTHROPIC_AUTH_TOKEN=... 与 ANTHROPIC_BASE_URL=https://your-gateway
-#         ANTHROPIC_MODEL=你的模型名（如 grok-4.5）
+# 编辑 .env：默认走硅基流动 OpenAI 兼容 API
+# LLM_PROVIDER=openai
+# LLM_BASE_URL=https://api.siliconflow.cn/v1
+# LLM_API_KEY=...
+# LLM_MODEL=Qwen/Qwen3-8B
 ```
 
 可选：设置 `GITHUB_TOKEN` 以提高 GitHub API 限额或读取私有仓库。
@@ -72,8 +73,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 - API 文档：http://127.0.0.1:8000/docs  
 - 健康检查：http://127.0.0.1:8000/health  
-- 同步分析：`POST /analyze`  
-- **流式分析（推荐 UI）**：`POST /analyze/stream`（SSE）  
+- 同步分析：`POST /analyze`（可选 `max_steps` 1–40，覆盖默认 `AGENT_MAX_STEPS`）  
+- **流式分析（推荐 UI）**：`POST /analyze/stream`（SSE；同样支持 `max_steps`、`model`）  
+- **分析记录**：`GET /analyze/runs`、`GET /analyze/runs/{id}`（含过程事件）、`DELETE /analyze/runs/{id}`  
+- **模型目录**：`GET /analyze/models`（适合代码分析的免费/付费模型与性价比）  
   - 事件：`start` / `step` / `tool` / `status` / `done` / `error`  
   - 前端开发模式会实时展示 Agent 步骤与工具调用时间线  
 - **从 Bug 修复**：  
@@ -114,7 +117,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 > **说明：** 表单中的「本地路径」是 **运行 uvicorn 的机器** 上的路径，不是浏览器本机路径。演示可用仓库内 `tests/fixtures/sample_repo` 的绝对路径，或 GitHub URL。
 
-分析可能经历多步工具调用（默认最多 12 步），前端请求超时约 10 分钟，请耐心等待。
+分析可能经历多步工具调用（默认最多 8 步），前端请求超时约 10 分钟。步数越大越慢。
 
 ### 4. 调用分析（curl）
 
@@ -171,12 +174,20 @@ pytest -q
 
 | 变量 | 说明 |
 |------|------|
-| `ANTHROPIC_API_KEY` | 官方密钥（与 AUTH_TOKEN 二选一） |
-| `ANTHROPIC_AUTH_TOKEN` | 中转站密钥（Claude Code 风格，与 API_KEY 二选一） |
-| `ANTHROPIC_BASE_URL` | 中转网关，如 `https://newapi.example.com`；官方则留空 |
-| `ANTHROPIC_MODEL` | 模型 ID，默认 `claude-sonnet-5`；中转可改为 `grok-4.5` 等 |
+| `LLM_PROVIDER` | `openai`（硅基流动）或 `anthropic`（旧中转） |
+| `LLM_BASE_URL` | OpenAI 兼容网关，默认 `https://api.siliconflow.cn/v1` |
+| `LLM_API_KEY` | 硅基流动 API Key |
+| `LLM_MODEL` | 默认 `Qwen/Qwen3-8B`；请求体也可传 `model` 覆盖 |
+| `ANALYZE_HISTORY_MAX` | 分析记录条数上限，默认 50 |
+| `LLM_ENABLE_THINKING` | 默认 `false`；Qwen3 tool 循环不要开 |
+| `ANTHROPIC_API_KEY` | 可选；与 AUTH_TOKEN 二选一（`LLM_PROVIDER=anthropic`） |
+| `ANTHROPIC_AUTH_TOKEN` | 私有中转密钥 |
+| `ANTHROPIC_BASE_URL` | Anthropic 兼容中转 |
+| `ANTHROPIC_MODEL` | Anthropic 路径模型 ID |
 | `GITHUB_TOKEN` | 可选 |
-| `AGENT_MAX_STEPS` | 默认 12 |
+| `AGENT_MAX_STEPS` | 默认 8 |
+| `AGENT_TOOL_MAX_TOKENS` | 中间 tool 步 max_tokens，默认 1024 |
+| `LLM_STEP_DELAY_SECONDS` | 步间等待；硅基流动建议 0 |
 | `AGENT_MAX_FILE_BYTES` | 单文件读取上限 |
 | `AGENT_MAX_TREE_ENTRIES` | 目录树条目上限 |
 
@@ -191,7 +202,7 @@ code-assistant-agent/
 │   ├── agent/            # loop / prompts / session
 │   ├── tools/            # registry + 4 个 MVP tools
 │   ├── repo/             # local + github
-│   ├── llm/              # Claude client
+│   ├── llm/              # Claude / OpenAI 兼容客户端
 │   └── models/           # 请求/响应 Pydantic
 ├── frontend/             # Vue 3 + Vite UI
 │   ├── src/
