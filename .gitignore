@@ -16,6 +16,9 @@ htmlcov/
 .idea/
 .vscode/
 
+# 分析记录落盘
+data/
+
 # Frontend
 frontend/node_modules/
 frontend/dist/
