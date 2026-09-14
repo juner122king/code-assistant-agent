@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterator
+from typing import Any, Dict, Iterator, Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -13,7 +13,10 @@ from app.agent.loop import AgentLoop
 from app.config import get_settings
 from app.fix.service import apply_proposal
 from app.fix.store import get_fix_store
+from app.history.store import get_analysis_store, run_summary
+from app.llm.catalog import catalog_payload
 from app.models.events import format_sse
+from app.models.history import AnalysisRunDetail, AnalysisRunList, AnalysisRunSummary
 from app.models.requests import (
     AnalyzeRequest,
     FixApplyRequest,
@@ -36,17 +39,40 @@ router = APIRouter()
 
 @router.get("/health")
 def health():
-    return {"status": "ok"}
+    """健康检查；附带当前 LLM 配置摘要（不含密钥），便于排查连错中转站。"""
+    settings = get_settings()
+    token = settings.resolved_api_key or ""
+    if settings.resolved_provider == "openai":
+        default_url = "https://api.siliconflow.cn/v1"
+    else:
+        default_url = "https://api.anthropic.com"
+    return {
+        "status": "ok",
+        "llm": {
+            "provider": settings.resolved_provider,
+            "base_url": settings.resolved_base_url or default_url,
+            "model": settings.resolved_model,
+            "has_credentials": settings.has_llm_credentials,
+            "token_prefix": (token[:8] + "…") if token else "",
+            "max_steps_default": settings.agent_max_steps,
+            "max_steps_cap": settings.agent_max_steps_cap,
+            "trust_env_proxy": settings.llm_trust_env_proxy,
+            "direct_connect": not settings.llm_trust_env_proxy,
+            "enable_thinking": settings.llm_enable_thinking,
+            "step_delay_seconds": settings.resolved_step_delay,
+        },
+    }
 
 
 def _ensure_credentials() -> None:
     settings = get_settings()
-    if not settings.has_anthropic_credentials:
+    if not settings.has_llm_credentials:
         raise HTTPException(
             status_code=500,
             detail=(
-                "未配置 ANTHROPIC_API_KEY 或 ANTHROPIC_AUTH_TOKEN；"
-                "中转站请同时设置 ANTHROPIC_BASE_URL 与 ANTHROPIC_MODEL"
+                "未配置 LLM 凭证。"
+                "OpenAI 兼容（硅基流动）请设置 LLM_PROVIDER=openai、LLM_API_KEY、LLM_MODEL；"
+                "Anthropic 中转请设置 ANTHROPIC_API_KEY 或 ANTHROPIC_AUTH_TOKEN，以及 BASE_URL / MODEL"
             ),
         )
 
@@ -59,28 +85,96 @@ def _sse_headers() -> dict:
     }
 
 
+def _apply_request_model(agent: AgentLoop, model: Optional[str]) -> None:
+    name = (model or "").strip()
+    if name:
+        agent.claude.model = name
+
+
+def _dump_report(data: Any) -> Dict[str, Any]:
+    if hasattr(data, "model_dump"):
+        return data.model_dump()
+    if isinstance(data, dict):
+        return data
+    return {}
+
+
+@router.get("/analyze/models")
+def analyze_models() -> dict:
+    """适合本 Agent 的模型目录（含免费/付费与性价比说明）。"""
+    return catalog_payload()
+
+
+@router.get("/analyze/runs", response_model=AnalysisRunList)
+def analyze_runs() -> AnalysisRunList:
+    """分析记录列表（新的在前）。"""
+    items = get_analysis_store().list_runs()
+    return AnalysisRunList(runs=[AnalysisRunSummary.model_validate(x) for x in items])
+
+
+@router.get("/analyze/runs/{run_id}", response_model=AnalysisRunDetail)
+def analyze_run_detail(run_id: str) -> AnalysisRunDetail:
+    """单条分析记录：过程事件 + 报告。"""
+    run = get_analysis_store().get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="analysis run not found")
+    summary = run_summary(run)
+    report = run.get("report")
+    return AnalysisRunDetail.model_validate(
+        {
+            **summary,
+            "events": run.get("events") or [],
+            "report": report,
+        }
+    )
+
+
+@router.delete("/analyze/runs/{run_id}")
+def analyze_run_delete(run_id: str) -> dict:
+    ok = get_analysis_store().delete(run_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="analysis run not found")
+    return {"ok": True, "id": run_id}
+
+
 @router.post("/analyze", response_model=AnalyzeResponse)
 def analyze(body: AnalyzeRequest) -> AnalyzeResponse:
     """分析本地路径或 GitHub 仓库，返回结构 / 风险 / Bug。"""
     _ensure_credentials()
     settings = get_settings()
+    store = get_analysis_store()
+    run = store.begin(
+        repo=body.repo,
+        branch=body.branch,
+        focus=body.focus,
+        max_steps=body.max_steps,
+    )
 
     backend = None
     try:
         backend, source = resolve_repo(body.repo, branch=body.branch, settings=settings)
         logger.info("resolved repo source=%s", source)
         agent = AgentLoop(backend, settings=settings)
-        return agent.run(focus=body.focus)
+        _apply_request_model(agent, body.model)
+        result = agent.run(focus=body.focus, max_steps=body.max_steps)
+        payload = result.model_dump()
+        store.append_event(run["id"], "done", payload)
+        store.finish(run["id"], report=payload)
+        return result
     except FileNotFoundError as exc:
+        store.finish(run["id"], error=str(exc))
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
+        store.finish(run["id"], error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except PermissionError as exc:
+        store.finish(run["id"], error=str(exc))
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as exc:
         logger.exception("analyze failed")
+        store.finish(run["id"], error=str(exc))
         raise HTTPException(status_code=502, detail=f"上游服务失败: {exc}") from exc
     finally:
         if isinstance(backend, GitHubBackend):
@@ -98,6 +192,8 @@ def analyze_stream(body: AnalyzeRequest) -> StreamingResponse:
 
     def event_gen() -> Iterator[str]:
         backend = None
+        store = None
+        run_id = None
         try:
             try:
                 backend, source = resolve_repo(
@@ -114,21 +210,51 @@ def analyze_stream(body: AnalyzeRequest) -> StreamingResponse:
                 return
 
             logger.info("stream resolved repo source=%s", source)
-            yield format_sse(
-                "status",
-                {"message": f"仓库已解析（{source}），启动 Agent…"},
+            store = get_analysis_store()
+            run = store.begin(
+                repo=body.repo,
+                branch=body.branch,
+                focus=body.focus,
+                max_steps=body.max_steps,
             )
+            run_id = run["id"]
+            status_payload = {
+                "message": f"仓库已解析（{source}），启动 Agent…",
+                "run_id": run_id,
+            }
+            store.append_event(run_id, "status", status_payload)
+            yield format_sse("status", status_payload)
 
             agent = AgentLoop(backend, settings=settings)
-            for etype, data in agent.iter_run(focus=body.focus):
+            _apply_request_model(agent, body.model)
+            for etype, data in agent.iter_run(
+                focus=body.focus, max_steps=body.max_steps
+            ):
                 if etype == "done":
-                    payload = data.model_dump() if hasattr(data, "model_dump") else data
+                    payload = _dump_report(data)
+                    payload["run_id"] = run_id
+                    store.append_event(run_id, "done", payload)
+                    store.finish(run_id, report=payload)
                     yield format_sse("done", payload)
                 else:
-                    yield format_sse(etype, data)
+                    payload = data if isinstance(data, dict) else {"value": data}
+                    if etype == "start":
+                        payload = dict(payload)
+                        payload["run_id"] = run_id
+                    store.append_event(run_id, etype, payload)
+                    yield format_sse(etype, payload)
         except Exception as exc:
             logger.exception("analyze stream failed")
-            yield format_sse("error", {"detail": f"上游服务失败: {exc}", "status": 502})
+            detail = f"上游服务失败: {exc}"
+            if store is not None and run_id:
+                try:
+                    store.append_event(
+                        run_id, "error", {"detail": detail, "status": 502}
+                    )
+                    store.finish(run_id, error=detail)
+                except Exception:
+                    pass
+            yield format_sse("error", {"detail": detail, "status": 502})
         finally:
             if isinstance(backend, GitHubBackend):
                 backend.close()
