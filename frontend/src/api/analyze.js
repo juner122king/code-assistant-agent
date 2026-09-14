@@ -18,7 +18,22 @@ function buildPayload(body) {
   if (body.branch && String(body.branch).trim()) {
     payload.branch = String(body.branch).trim()
   }
+  if (body.max_steps != null && body.max_steps !== '') {
+    const n = Number(body.max_steps)
+    if (Number.isFinite(n) && n >= 1) {
+      payload.max_steps = Math.min(40, Math.floor(n))
+    }
+  }
+  if (body.model && String(body.model).trim()) {
+    payload.model = String(body.model).trim()
+  }
   return payload
+}
+
+export async function listAnalysisModels() {
+  const res = await fetch('/analyze/models')
+  if (!res.ok) return { models: [], defaults: {} }
+  return res.json()
 }
 
 /**

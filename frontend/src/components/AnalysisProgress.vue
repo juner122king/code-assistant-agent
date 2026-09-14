@@ -15,6 +15,8 @@ const props = defineProps({
   phase: { type: String, default: '' },
   phaseMessage: { type: String, default: '准备分析…' },
   startedAt: { type: Number, default: 0 },
+  finishedAt: { type: Number, default: 0 },
+  live: { type: Boolean, default: true },
 })
 
 const elapsedSec = ref(0)
@@ -23,19 +25,32 @@ let timer = null
 
 onMounted(() => {
   tick()
-  timer = setInterval(tick, 1000)
+  if (props.live) timer = setInterval(tick, 1000)
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 
+watch(
+  () => [props.live, props.startedAt, props.finishedAt],
+  () => {
+    if (timer) {
+      clearInterval(timer)
+      timer = null
+    }
+    tick()
+    if (props.live) timer = setInterval(tick, 1000)
+  },
+)
+
 function tick() {
   if (!props.startedAt) {
     elapsedSec.value = 0
     return
   }
-  elapsedSec.value = Math.max(0, Math.floor((Date.now() - props.startedAt) / 1000))
+  const end = props.live ? Date.now() : props.finishedAt || Date.now()
+  elapsedSec.value = Math.max(0, Math.floor((end - props.startedAt) / 1000))
 }
 
 const elapsedLabel = computed(() => {
@@ -49,6 +64,7 @@ const progressPct = computed(() => {
   if (!props.maxSteps || props.maxSteps <= 0) return 8
   const base = Math.min(props.step, props.maxSteps) / props.maxSteps
   // 进行中略微留一点余量；finished 阶段拉满一点
+  if (!props.live || props.phase === 'finished') return 100
   if (props.phase === 'finished') return Math.min(96, Math.round(base * 100))
   return Math.max(6, Math.min(92, Math.round(base * 100)))
 })
@@ -89,9 +105,9 @@ function kindClass(item) {
   <section class="card progress" role="status" aria-live="polite">
     <header class="progress-head">
       <div class="head-left">
-        <div class="spinner" aria-hidden="true" />
+        <div v-if="live" class="spinner" aria-hidden="true" />
         <div>
-          <h2 class="card-title">分析进行中</h2>
+          <h2 class="card-title">{{ live ? '分析进行中' : '分析过程' }}</h2>
           <p class="phase-msg">{{ phaseMessage }}</p>
         </div>
       </div>
@@ -117,7 +133,7 @@ function kindClass(item) {
     </div>
 
     <h3 class="timeline-title">
-      实时过程
+      {{ live ? '实时过程' : '完整过程' }}
       <span class="count">{{ items.length }}</span>
     </h3>
 
@@ -149,7 +165,7 @@ function kindClass(item) {
       </ol>
     </div>
 
-    <p class="foot-hint">请勿关闭或刷新本页。默认超时 10 分钟。</p>
+    <p v-if="live" class="foot-hint">请勿关闭或刷新本页。默认超时 10 分钟。</p>
   </section>
 </template>
 
