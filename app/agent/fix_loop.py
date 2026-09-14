@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from app.agent.fix_prompts import FIX_SYSTEM_PROMPT, build_fix_user_message
@@ -18,7 +19,7 @@ from app.agent.session import AgentSession
 from app.config import Settings, get_settings
 from app.fix.service import enrich_changes
 from app.fix.store import FixStore, get_fix_store
-from app.llm.claude_client import ClaudeClient
+from app.llm.factory import LlmClient, get_llm_client
 from app.models.events import preview_text, tool_input_summary
 from app.models.requests import BugPayload
 from app.models.responses import FixProposal
@@ -50,13 +51,13 @@ class FixAgentLoop:
         backend: RepoBackend,
         *,
         settings: Optional[Settings] = None,
-        claude: Optional[ClaudeClient] = None,
+        claude: Optional[LlmClient] = None,
         registry: Optional[ToolRegistry] = None,
         store: Optional[FixStore] = None,
     ):
         self.backend = backend
         self.settings = settings or get_settings()
-        self.claude = claude or ClaudeClient(self.settings)
+        self.claude = claude or get_llm_client(self.settings)
         self.registry = registry or build_default_registry()
         self.store = store or get_fix_store(self.settings.fix_proposal_ttl_seconds)
 
@@ -113,9 +114,18 @@ class FixAgentLoop:
             },
         )
 
+        step_delay = float(getattr(self.settings, "resolved_step_delay", 0) or 0)
+
         for step in range(1, max_steps + 1):
             session.steps = step
             logger.info("=== Fix Agent step %d/%d ===", step, max_steps)
+
+            if step > 1 and step_delay > 0:
+                yield (
+                    "status",
+                    {"message": f"限速等待 {step_delay:.1f}s，降低中转上游限流…"},
+                )
+                time.sleep(step_delay)
 
             yield (
                 "step",
@@ -127,10 +137,21 @@ class FixAgentLoop:
                 },
             )
 
+            remaining = max_steps - step + 1
+            full = int(self.settings.agent_max_tokens or 4096)
+            tool_cap = int(getattr(self.settings, "agent_tool_max_tokens", 1024) or 1024)
+            max_tokens = full if remaining <= 2 else max(256, min(tool_cap, full))
+            system = FIX_SYSTEM_PROMPT
+            if remaining <= 2:
+                system += (
+                    "\n步数将尽：停止探索，基于已读文件只输出 JSON 提案。"
+                    "一步可并行多个 read_file。"
+                )
             response = self.claude.create_message(
                 messages=session.messages,
-                system=FIX_SYSTEM_PROMPT,
+                system=system,
                 tools=tools,
+                max_tokens=max_tokens,
             )
 
             assistant_blocks = _content_blocks_to_api(response.content)
@@ -261,7 +282,7 @@ class FixAgentLoop:
                     messages=repair_messages,
                     system=FIX_SYSTEM_PROMPT,
                     tools=[],
-                    max_tokens=4096,
+                    max_tokens=int(self.settings.agent_max_tokens or 4096),
                 )
                 final_text = _extract_text(repair.content)
                 parsed = _parse_fix_json(final_text)

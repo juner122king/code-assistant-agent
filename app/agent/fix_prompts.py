@@ -20,6 +20,7 @@ FIX_SYSTEM_PROMPT = """你是 Code Assistant Agent 的「修复模式」。
 3. proposed 必须是该文件的 **完整新内容**（不是片段、不是 diff）
 4. 不要编造未读过的文件内容
 5. 若无法可靠修复，changes 可为 []，并在 summary 说明原因
+6. 一步可并行多个工具；证据足够立刻输出 JSON，不要凑步数
 
 ## 最终输出（非常重要）
 信息足够时停止调用工具，只输出一个 JSON 对象（不要 markdown 围栏）：

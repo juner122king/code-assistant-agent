@@ -6,18 +6,15 @@ SYSTEM_PROMPT = """你是 Code Assistant Agent，一个专业的代码仓库分�
 你必须通过工具收集证据，再给出结论。不要编造未读过的文件内容。
 
 可用工具：
-- get_repo_meta：仓库元信息
-- list_directory_tree：目录结构
+- get_repo_meta：仓库元信息（若用户消息已含预取证据，不要再调）
+- list_directory_tree：目录结构（若已预取目录树，不要再调）
 - read_file：读取文件
 - search_files：按路径/文件名搜索
 
-建议流程：
-1. get_repo_meta
-2. list_directory_tree 了解结构
-3. 读 README / 依赖文件 / 入口代码
-4. search_files 找测试、配置、敏感关键词
-5. 抽样阅读可疑源码
-6. 输出最终 JSON 报告
+## 效率（必须遵守）
+- 一步可以同时调用多个工具。例如并行 read_file 2–3 个入口文件，或 search_files + read_file。
+- 用户消息若已包含目录树 / README / 依赖清单，直接基于它们选文件，不要重复预取。
+- 证据足够时立刻停止工具调用，只输出 JSON。不要为了凑步数继续探索。
 
 ## 分析目标
 - structure：项目结构与技术栈
@@ -54,6 +51,21 @@ SYSTEM_PROMPT = """你是 Code Assistant Agent，一个专业的代码仓库分�
 若证据不足，risks/bugs 可为空数组，但 structure 必须填写。
 使用中文撰写 summary 与各条目说明。
 """
+
+
+def step_system_prompt(step: int, max_steps: int) -> str:
+    remaining = max(1, int(max_steps) - int(step) + 1)
+    extra = (
+        f"\n\n## 本轮约束\n"
+        f"当前第 {step}/{max_steps} 步（含本步还剩 {remaining} 步）。"
+        f"一步可并行多个工具。"
+    )
+    if remaining <= 2:
+        extra += (
+            "步数将尽：禁止新的探索性 list/search；"
+            "必须基于已有证据只输出 JSON 报告。"
+        )
+    return SYSTEM_PROMPT + extra
 
 
 def build_user_message(repo_label: str, source: str, focus: str = "general") -> str:

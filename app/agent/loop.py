@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
-from app.agent.prompts import SYSTEM_PROMPT, build_user_message
+from app.agent.bootstrap import collect_bootstrap
+from app.agent.prompts import SYSTEM_PROMPT, build_user_message, step_system_prompt
 from app.agent.session import AgentSession
 from app.config import Settings, get_settings
-from app.llm.claude_client import ClaudeClient
+from app.llm.factory import LlmClient, get_llm_client
 from app.models.events import preview_text, tool_input_summary
 from app.models.responses import (
     AnalyzeResponse,
@@ -192,23 +194,46 @@ class AgentLoop:
         backend: RepoBackend,
         *,
         settings: Optional[Settings] = None,
-        claude: Optional[ClaudeClient] = None,
+        claude: Optional[LlmClient] = None,
         registry: Optional[ToolRegistry] = None,
     ):
         self.backend = backend
         self.settings = settings or get_settings()
-        self.claude = claude or ClaudeClient(self.settings)
+        self.claude = claude or get_llm_client(self.settings)
         self.registry = registry or build_default_registry()
+
+    def _resolve_max_steps(self, max_steps: Optional[int] = None) -> int:
+        """请求覆盖优先，否则用配置默认值，并钳制到 [1, cap]。"""
+        cap = max(1, int(self.settings.agent_max_steps_cap or 40))
+        default = int(self.settings.agent_max_steps or 8)
+        steps = int(max_steps) if max_steps is not None else default
+        if steps < 1:
+            steps = 1
+        if steps > cap:
+            steps = cap
+        return steps
+
+    def _step_delay(self) -> float:
+        return float(getattr(self.settings, "resolved_step_delay", 0) or 0)
+
+    def _max_tokens_for_step(self, step: int, max_steps: int) -> int:
+        full = int(self.settings.agent_max_tokens or 4096)
+        # 第 1 步强制工具调用，输出短；之后多半是 JSON 报告
+        if step <= 1:
+            tool_cap = int(getattr(self.settings, "agent_tool_max_tokens", 1024) or 1024)
+            return max(256, min(tool_cap, full))
+        return full
 
     def run(
         self,
         *,
         focus: str = "general",
+        max_steps: Optional[int] = None,
         on_event: Optional[EventCallback] = None,
     ) -> AnalyzeResponse:
         """同步跑完整分析；可选 on_event(event_type, data) 接收过程事件。"""
         result: Optional[AnalyzeResponse] = None
-        for etype, data in self.iter_run(focus=focus):
+        for etype, data in self.iter_run(focus=focus, max_steps=max_steps):
             if etype == "done":
                 result = data  # type: ignore[assignment]
                 if on_event is not None and result is not None:
@@ -219,7 +244,12 @@ class AgentLoop:
             raise RuntimeError("AgentLoop.iter_run 未产生 done 事件")
         return result
 
-    def iter_run(self, *, focus: str = "general") -> Iterator[Tuple[str, Any]]:
+    def iter_run(
+        self,
+        *,
+        focus: str = "general",
+        max_steps: Optional[int] = None,
+    ) -> Iterator[Tuple[str, Any]]:
         """生成过程事件，最后 yield ("done", AnalyzeResponse)。"""
         meta = self.backend.meta()
         session = AgentSession(
@@ -227,16 +257,12 @@ class AgentLoop:
             source=meta.source,
             focus=focus,
         )
-        session.messages = [
-            {
-                "role": "user",
-                "content": build_user_message(meta.identifier, meta.source, focus),
-            }
-        ]
+        user_text = build_user_message(meta.identifier, meta.source, focus)
+        session.messages = [{"role": "user", "content": user_text}]
 
         tools = self.registry.schemas()
         final_text = ""
-        max_steps = self.settings.agent_max_steps
+        max_steps = self._resolve_max_steps(max_steps)
 
         yield (
             "start",
@@ -249,9 +275,41 @@ class AgentLoop:
             },
         )
 
+        yield (
+            "status",
+            {"message": "预取仓库结构、README 与依赖清单…"},
+        )
+        boot = collect_bootstrap(self.registry, self.backend, self.settings)
+        for item in boot.items:
+            session.record_tool(item.name, item.tool_input)
+            summary = tool_input_summary(item.tool_input)
+            yield (
+                "tool",
+                {
+                    "step": 0,
+                    "name": item.name,
+                    "input_summary": summary,
+                    "status": "ok" if item.ok else "error",
+                    "preview": preview_text(item.result),
+                },
+            )
+        if boot.briefing:
+            session.messages[0]["content"] = user_text + "\n\n" + boot.briefing
+
+        step_delay = self._step_delay()
+
         for step in range(1, max_steps + 1):
             session.steps = step
             logger.info("=== Agent step %d/%d ===", step, max_steps)
+
+            if step > 1 and step_delay > 0:
+                yield (
+                    "status",
+                    {
+                        "message": f"限速等待 {step_delay:.1f}s，降低中转上游限流…",
+                    },
+                )
+                time.sleep(step_delay)
 
             yield (
                 "step",
@@ -265,8 +323,10 @@ class AgentLoop:
 
             response = self.claude.create_message(
                 messages=session.messages,
-                system=SYSTEM_PROMPT,
+                system=step_system_prompt(step, max_steps),
                 tools=tools,
+                max_tokens=self._max_tokens_for_step(step, max_steps),
+                tool_choice="required" if step == 1 else "auto",
             )
 
             assistant_blocks = _content_blocks_to_api(response.content)
@@ -274,6 +334,20 @@ class AgentLoop:
 
             tool_uses = _extract_tool_uses(response.content)
             stop_reason = getattr(response, "stop_reason", None)
+
+            if not tool_uses and step == 1:
+                logger.info("step 1 produced no tools, nudging to read source")
+                session.messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "预取只有结构/README，不能当作完整分析。"
+                            "请并行 read_file 入口源码（如 src/app.py、main.py），"
+                            "不要只根据 README 下结论。"
+                        ),
+                    }
+                )
+                continue
 
             if not tool_uses:
                 final_text = _extract_text(response.content)
@@ -412,7 +486,7 @@ class AgentLoop:
                     messages=repair_messages,
                     system=SYSTEM_PROMPT,
                     tools=[],  # 不再给工具，强制文本输出
-                    max_tokens=4096,
+                    max_tokens=int(self.settings.agent_max_tokens or 4096),
                 )
                 final_text = _extract_text(repair.content)
                 parsed = _parse_report_json(final_text)
