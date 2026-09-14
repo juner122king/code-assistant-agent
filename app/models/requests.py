@@ -19,6 +19,16 @@ class AnalyzeRequest(BaseModel):
         "general",
         description="分析侧重点",
     )
+    max_steps: Optional[int] = Field(
+        None,
+        ge=1,
+        le=40,
+        description="Agent 最大步数；省略则使用服务端 AGENT_MAX_STEPS",
+    )
+    model: Optional[str] = Field(
+        None,
+        description="覆盖本次分析使用的模型 ID，如 Qwen/Qwen3-8B",
+    )
 
 
 class BugPayload(BaseModel):
