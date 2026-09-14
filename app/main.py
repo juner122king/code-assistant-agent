@@ -16,6 +16,19 @@ logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
+_logger = logging.getLogger("app.main")
+_logger.info(
+    "LLM config provider=%s base_url=%s model=%s credentials=%s",
+    settings.resolved_provider,
+    settings.resolved_base_url
+    or (
+        "https://api.siliconflow.cn/v1"
+        if settings.resolved_provider == "openai"
+        else "default(api.anthropic.com)"
+    ),
+    settings.resolved_model,
+    "yes" if settings.has_llm_credentials else "no",
+)
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 FRONTEND_INDEX = FRONTEND_DIST / "index.html"
