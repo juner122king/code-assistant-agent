@@ -171,7 +171,7 @@ function kindClass(item) {
 
 <style scoped>
 .progress {
-  margin-top: 1rem;
+  padding: 1.25rem 1.4rem;
 }
 
 .progress-head {
@@ -194,11 +194,11 @@ function kindClass(item) {
 }
 
 .spinner {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   margin-top: 0.2rem;
   border-radius: 50%;
-  border: 3px solid #dbeafe;
+  border: 3px solid var(--border);
   border-top-color: var(--primary);
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
@@ -207,38 +207,40 @@ function kindClass(item) {
 .phase-msg {
   margin: 0.15rem 0 0;
   color: var(--text-muted);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .elapsed {
   display: inline-block;
   font-family: var(--mono);
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  background: #f1f5f9;
-  padding: 0.25rem 0.55rem;
-  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
 }
 
 .meta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem 1.1rem;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   margin-bottom: 0.75rem;
-  color: var(--text);
+  color: var(--text-muted);
 }
 
 .meta-row strong {
   margin-right: 0.3rem;
-  color: var(--text-muted);
+  color: var(--text);
   font-weight: 600;
 }
 
 .bar-track {
   height: 6px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
   overflow: hidden;
   margin-bottom: 1rem;
 }
@@ -246,17 +248,19 @@ function kindClass(item) {
 .bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  box-shadow: 0 0 10px var(--primary-glow);
   transition: width 0.35s ease;
 }
 
 .timeline-title {
   margin: 0 0 0.55rem;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 650;
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  color: var(--text);
 }
 
 .count {
@@ -266,26 +270,27 @@ function kindClass(item) {
   min-width: 1.45rem;
   padding: 0 0.35rem;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
 .timeline {
-  max-height: 340px;
-  overflow: auto;
+  max-height: 380px;
+  overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #f8fafc;
-  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  padding: 0.75rem 0.85rem;
 }
 
 .timeline-list {
   list-style: none;
   margin: 0;
   padding: 0 0 0 0.35rem;
-  border-left: 2px solid #cbd5e1;
+  border-left: 2px solid var(--border);
 }
 
 .timeline-item {
@@ -302,55 +307,57 @@ function kindClass(item) {
   width: 1rem;
   height: 1rem;
   border-radius: 50%;
-  background: #fff;
-  border: 2px solid #94a3b8;
+  background: var(--surface);
+  border: 2px solid var(--border);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 0.62rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   line-height: 1;
 }
 
 .kind-tool .dot {
-  border-color: #3b82f6;
-  color: #2563eb;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .kind-step .dot {
-  border-color: #8b5cf6;
-  color: #7c3aed;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .kind-start .dot,
 .kind-status .dot {
-  border-color: #64748b;
+  border-color: var(--border-hover);
 }
 
 .is-ok .dot {
-  border-color: #059669;
-  color: #059669;
-  background: #ecfdf5;
+  border-color: var(--low);
+  color: var(--low);
+  background: var(--low-bg);
 }
 
 .is-error .dot {
-  border-color: #dc2626;
-  color: #dc2626;
-  background: #fef2f2;
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .is-running .dot {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+  box-shadow: 0 0 8px var(--primary-glow);
 }
 
 .dot-spin {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 50%;
-  border: 1.5px solid #bfdbfe;
-  border-top-color: #2563eb;
+  border: 1.5px solid var(--border);
+  border-top-color: var(--primary);
   animation: spin 0.7s linear infinite;
 }
 
@@ -367,20 +374,20 @@ function kindClass(item) {
 }
 
 .item-title {
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--text);
 }
 
 .item-step {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   font-family: var(--mono);
 }
 
 .item-summary {
   margin: 0.15rem 0 0;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   font-family: var(--mono);
   word-break: break-all;
@@ -388,7 +395,7 @@ function kindClass(item) {
 
 .item-preview {
   margin-top: 0.3rem;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
@@ -400,24 +407,25 @@ function kindClass(item) {
 .item-preview pre {
   margin-top: 0.35rem;
   padding: 0.45rem 0.55rem;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  max-height: 120px;
+  border-radius: var(--radius-sm);
+  max-height: 140px;
   overflow: auto;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
+  color: var(--text);
 }
 
 .foot-hint {
   margin: 0.75rem 0 0;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
 .empty-hint {
   margin: 0.4rem 0;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 @keyframes spin {

@@ -82,7 +82,7 @@ function toneClass(name) {
 .hint {
   margin: -0.4rem 0 0.85rem;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .count {
@@ -93,9 +93,10 @@ function toneClass(name) {
   margin-left: 0.4rem;
   padding: 0 0.4rem;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   vertical-align: middle;
 }
@@ -111,12 +112,12 @@ function toneClass(name) {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.25rem 0.6rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
   border: 1px solid var(--border);
-  background: #f8fafc;
+  background: var(--surface-subtle);
   color: var(--text-muted);
 }
 
@@ -126,33 +127,33 @@ function toneClass(name) {
 }
 
 .type-chip.tone-read {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1d4ed8;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
 }
 .type-chip.tone-list {
-  background: #f5f3ff;
-  border-color: #ddd6fe;
-  color: #6d28d9;
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #c084fc;
 }
 .type-chip.tone-search {
-  background: #fff7ed;
-  border-color: #fed7aa;
-  color: #c2410c;
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
 }
 .type-chip.tone-meta {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #047857;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
 }
 
 .tool-timeline {
   list-style: none;
   margin: 0;
   padding: 0 0 0 0.4rem;
-  border-left: 2px solid #e2e8f0;
-  max-height: 360px;
-  overflow: auto;
+  border-left: 2px solid var(--border);
+  max-height: 380px;
+  overflow-y: auto;
 }
 
 .tool-item {
@@ -169,25 +170,25 @@ function toneClass(name) {
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 50%;
-  background: #fff;
-  border: 2px solid #94a3b8;
+  background: var(--surface);
+  border: 2px solid var(--border);
 }
 
 .dot.tone-read {
-  border-color: #3b82f6;
-  background: #dbeafe;
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.2);
 }
 .dot.tone-list {
-  border-color: #8b5cf6;
-  background: #ede9fe;
+  border-color: #c084fc;
+  background: rgba(168, 85, 247, 0.2);
 }
 .dot.tone-search {
-  border-color: #f97316;
-  background: #ffedd5;
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.2);
 }
 .dot.tone-meta {
-  border-color: #10b981;
-  background: #d1fae5;
+  border-color: #34d399;
+  background: rgba(16, 185, 129, 0.2);
 }
 
 .tool-body {
@@ -204,38 +205,40 @@ function toneClass(name) {
 
 .tool-idx {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--text-dim);
   font-family: var(--mono);
 }
 
 .tool-name {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--text);
+  font-family: var(--mono);
 }
 
 .tool-name.tone-read {
-  color: #1d4ed8;
+  color: #38bdf8;
 }
 .tool-name.tone-list {
-  color: #6d28d9;
+  color: #c084fc;
 }
 .tool-name.tone-search {
-  color: #c2410c;
+  color: #fbbf24;
 }
 .tool-name.tone-meta {
-  color: #047857;
+  color: #34d399;
 }
 
 .tool-arg {
   display: block;
   margin-top: 0.2rem;
   font-family: var(--mono);
-  font-size: 0.78rem;
-  color: var(--text-muted);
+  font-size: 0.75rem;
+  color: var(--text);
   word-break: break-all;
-  background: #f1f5f9;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
   padding: 0.2rem 0.45rem;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
 }
 </style>

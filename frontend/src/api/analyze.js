@@ -285,3 +285,20 @@ export async function checkHealth() {
     return false
   }
 }
+
+/**
+ * 探测本地目录的 Git 分支与所有分支列表。非 Git 目录返回 { is_git: false, branch: null, branches: [] }
+ * @param {string} repo
+ * @returns {Promise<{ is_git: boolean, branch: string | null, branches: string[] }>}
+ */
+export async function detectRepoBranch(repo) {
+  const raw = String(repo || '').trim()
+  if (!raw) return { is_git: false, branch: null, branches: [] }
+  try {
+    const res = await fetch(`/repo/branch?repo=${encodeURIComponent(raw)}`)
+    if (!res.ok) return { is_git: false, branch: null, branches: [] }
+    return await res.json()
+  } catch {
+    return { is_git: false, branch: null, branches: [] }
+  }
+}

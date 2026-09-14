@@ -101,18 +101,18 @@ const barSegments = computed(() => {
 
 .clean-tag {
   margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 650;
   color: var(--low);
   background: var(--low-bg);
-  border: 1px solid #a7f3d0;
+  border: 1px solid var(--low-border);
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
 }
 
 .hint-tag {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
 }
 
@@ -131,21 +131,27 @@ const barSegments = computed(() => {
 
 .stat-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fafbfc 0%, #fff 100%);
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
   padding: 0.75rem 0.9rem;
   min-height: 4.5rem;
+  transition: all 0.15s;
+}
+
+.stat-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
 }
 
 .stat-card.alert {
-  border-color: #fecaca;
-  background: linear-gradient(180deg, #fef2f2 0%, #fff 100%);
+  border-color: var(--high-border);
+  background: linear-gradient(180deg, var(--high-bg) 0%, var(--surface-subtle) 100%);
 }
 
 .stat-label {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-dim);
   letter-spacing: 0.02em;
 }
 
@@ -156,6 +162,7 @@ const barSegments = computed(() => {
   letter-spacing: -0.03em;
   line-height: 1.15;
   color: var(--text);
+  font-family: var(--mono);
 }
 
 .stat-card.alert .stat-value {
@@ -164,7 +171,7 @@ const barSegments = computed(() => {
 
 .stat-sub {
   margin-top: 0.2rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
 }
 
@@ -180,22 +187,23 @@ const barSegments = computed(() => {
 }
 
 .section-label {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 650;
   color: var(--text-muted);
 }
 
 .severity-total {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  font-size: 0.78rem;
+  color: var(--text-dim);
 }
 
 .severity-bar {
   display: flex;
-  height: 10px;
+  height: 8px;
   border-radius: 999px;
   overflow: hidden;
-  background: #e2e8f0;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
   gap: 2px;
 }
 
@@ -218,7 +226,7 @@ const barSegments = computed(() => {
 }
 
 .seg-empty {
-  background: #94a3b8;
+  background: var(--border-hover);
   opacity: 0.35;
 }
 
@@ -227,7 +235,7 @@ const barSegments = computed(() => {
   flex-wrap: wrap;
   gap: 0.75rem 1.1rem;
   margin-top: 0.55rem;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 

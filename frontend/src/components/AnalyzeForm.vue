@@ -98,17 +98,6 @@ function onSubmit(event) {
 
     <div class="row">
       <label class="field">
-        <span class="label">分支（可选）</span>
-        <input
-          type="text"
-          :disabled="loading"
-          :value="modelValue.branch"
-          placeholder="默认分支留空"
-          @input="updateField('branch', $event)"
-        />
-      </label>
-
-      <label class="field">
         <span class="label">分析侧重点</span>
         <select
           :disabled="loading"
@@ -120,28 +109,28 @@ function onSubmit(event) {
           <option value="bugs">Bug（bugs）</option>
         </select>
       </label>
-    </div>
 
-    <label class="field">
-      <span class="label">模型</span>
-      <select
-        :disabled="loading"
-        :value="modelValue.model || 'Qwen/Qwen3-8B'"
-        @change="updateField('model', $event)"
-      >
-        <optgroup v-if="freeModels.length" label="免费">
-          <option v-for="m in freeModels" :key="m.id" :value="m.id">
-            {{ optionLabel(m) }}
-          </option>
-        </optgroup>
-        <optgroup v-if="paidModels.length" label="付费">
-          <option v-for="m in paidModels" :key="m.id" :value="m.id">
-            {{ optionLabel(m) }}
-          </option>
-        </optgroup>
-      </select>
-      <p v-if="selectedModel" class="steps-hint">{{ selectedModel.note }}</p>
-    </label>
+      <label class="field">
+        <span class="label">模型</span>
+        <select
+          :disabled="loading"
+          :value="modelValue.model || 'Qwen/Qwen3-8B'"
+          @change="updateField('model', $event)"
+        >
+          <optgroup v-if="freeModels.length" label="免费">
+            <option v-for="m in freeModels" :key="m.id" :value="m.id">
+              {{ optionLabel(m) }}
+            </option>
+          </optgroup>
+          <optgroup v-if="paidModels.length" label="付费">
+            <option v-for="m in paidModels" :key="m.id" :value="m.id">
+              {{ optionLabel(m) }}
+            </option>
+          </optgroup>
+        </select>
+      </label>
+    </div>
+    <p v-if="selectedModel" class="steps-hint">{{ selectedModel.note }}</p>
 
     <details class="model-table">
       <summary>适合代码分析的模型与性价比</summary>
@@ -199,21 +188,30 @@ function onSubmit(event) {
 </template>
 
 <style scoped>
+.form {
+  padding: 1.15rem 1.1rem;
+}
+
 .form-hint {
-  margin: -0.35rem 0 1rem;
+  margin: -0.35rem 0 0.95rem;
   color: var(--text-muted);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.85rem;
 }
 
 .label {
-  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text);
 }
@@ -226,49 +224,50 @@ function onSubmit(event) {
 input,
 select {
   width: 100%;
-  padding: 0.65rem 0.75rem;
+  padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
   color: var(--text);
+  font-size: 0.85rem;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 input:focus,
 select:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 input:disabled,
 select:disabled {
-  opacity: 0.7;
-  background: #f8fafc;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem 1rem;
+  gap: 0.65rem 0.75rem;
 }
 
 .steps-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.65rem 0.85rem;
+  gap: 0.5rem 0.75rem;
 }
 
 .steps-row input[type='number'] {
-  width: 6.5rem;
+  width: 5.5rem;
   flex-shrink: 0;
 }
 
 .steps-hint {
   flex: 1;
-  min-width: 12rem;
-  font-size: 0.82rem;
+  min-width: 10rem;
+  font-size: 0.76rem;
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -276,65 +275,81 @@ select:disabled {
 .actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.25rem;
+  margin-top: 0.4rem;
 }
 
 .btn-primary {
+  width: 100%;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--primary);
   color: #fff;
   font-weight: 600;
-  padding: 0.65rem 1.25rem;
-  transition: background 0.15s;
+  font-size: 0.88rem;
+  padding: 0.65rem 1.1rem;
+  box-shadow: 0 2px 10px var(--primary-glow);
+  transition: background 0.15s, transform 0.1s;
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--primary-hover);
+  transform: translateY(-1px);
 }
 
 .btn-primary:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .model-table {
-  margin: 0 0 1rem;
-  font-size: 0.82rem;
+  margin: 0 0 0.85rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
 .model-table summary {
   cursor: pointer;
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-muted);
   margin-bottom: 0.45rem;
+  transition: color 0.15s;
+}
+
+.model-table summary:hover {
+  color: var(--text);
 }
 
 .model-table table {
   width: 100%;
   border-collapse: collapse;
-  background: #f8fafc;
+  background: var(--surface-subtle);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
 .model-table th,
 .model-table td {
   text-align: left;
-  padding: 0.4rem 0.5rem;
+  padding: 0.35rem 0.45rem;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
+  font-size: 0.75rem;
+}
+
+.model-table th {
+  color: var(--text-dim);
+  font-weight: 600;
 }
 
 .model-table code {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  color: var(--primary);
 }
 
 .model-table .mini {
-  color: var(--text-muted);
-  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-size: 0.7rem;
 }
 
 @media (max-width: 640px) {

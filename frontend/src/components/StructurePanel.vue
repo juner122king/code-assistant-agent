@@ -122,17 +122,20 @@ function toggle(id) {
 }
 
 .section-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--text-dim);
   margin-bottom: 0.45rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .summary {
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.6;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
+  color: var(--text);
 }
 
 .chips {
@@ -143,37 +146,37 @@ function toggle(id) {
 
 .chip {
   display: inline-block;
-  padding: 0.28rem 0.65rem;
+  padding: 0.22rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 600;
   border: 1px solid transparent;
 }
 
 .chip-tone-0 {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
 }
 .chip-tone-1 {
-  background: #f5f3ff;
-  color: #6d28d9;
-  border-color: #ddd6fe;
+  background: rgba(168, 85, 247, 0.14);
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.3);
 }
 .chip-tone-2 {
-  background: #ecfdf5;
-  color: #047857;
-  border-color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
 }
 .chip-tone-3 {
-  background: #fff7ed;
-  color: #c2410c;
-  border-color: #fed7aa;
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
 }
 .chip-tone-4 {
-  background: #fdf2f8;
-  color: #be185d;
-  border-color: #fbcfe8;
+  background: rgba(244, 63, 94, 0.14);
+  color: #fb7185;
+  border-color: rgba(244, 63, 94, 0.3);
 }
 
 .tree-wrap {
@@ -182,12 +185,12 @@ function toggle(id) {
 
 .tree-ui {
   max-height: 360px;
-  overflow: auto;
-  padding: 0.55rem 0.5rem;
-  background: #0b1220;
-  color: #e2e8f0;
-  border-radius: 10px;
-  border: 1px solid #1e293b;
+  overflow-y: auto;
+  padding: 0.65rem 0.6rem;
+  background: var(--surface-subtle);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
 }
 
 .tree-row {
@@ -202,15 +205,16 @@ function toggle(id) {
   height: 1.25rem;
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-dim);
   padding: 0;
   font-size: 0.75rem;
   line-height: 1;
   flex-shrink: 0;
+  transition: color 0.15s;
 }
 
 .tree-toggle:hover {
-  color: #e2e8f0;
+  color: var(--primary);
 }
 
 .tree-spacer {
@@ -220,13 +224,13 @@ function toggle(id) {
 
 .tree-label {
   font-family: var(--mono);
-  font-size: 0.8rem;
-  color: #cbd5e1;
+  font-size: 0.78rem;
+  color: var(--text);
   word-break: break-all;
 }
 
 .tree-label.dir {
-  color: #93c5fd;
+  color: var(--primary);
   font-weight: 600;
 }
 </style>

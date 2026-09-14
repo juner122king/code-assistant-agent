@@ -209,9 +209,10 @@ function onProposeFix(item, index) {
   margin-left: 0.4rem;
   padding: 0 0.4rem;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
   vertical-align: middle;
 }
@@ -224,44 +225,44 @@ function onProposeFix(item, index) {
 
 .filter-chip {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface-subtle);
   color: var(--text-muted);
   border-radius: 999px;
   padding: 0.2rem 0.55rem;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: all 0.15s;
 }
 
 .filter-chip:hover {
-  border-color: #cbd5e1;
+  border-color: var(--border-hover);
   color: var(--text);
 }
 
 .filter-chip.active {
   background: var(--primary-soft);
-  border-color: #bfdbfe;
+  border-color: var(--primary);
   color: var(--primary);
 }
 
 .filter-chip.sev-high.active {
   background: var(--high-bg);
-  border-color: #fecaca;
+  border-color: var(--high-border);
   color: var(--high);
 }
 
 .filter-chip.sev-medium.active {
   background: var(--medium-bg);
-  border-color: #fde68a;
+  border-color: var(--medium-border);
   color: var(--medium);
 }
 
 .filter-chip.sev-low.active {
   background: var(--low-bg);
-  border-color: #a7f3d0;
+  border-color: var(--low-border);
   color: var(--low);
 }
 
@@ -293,7 +294,7 @@ function onProposeFix(item, index) {
   background: var(--low-bg);
   color: var(--low);
   font-weight: 700;
-  border: 1px solid #a7f3d0;
+  border: 1px solid var(--low-border);
 }
 
 .finding-list {
@@ -304,30 +305,32 @@ function onProposeFix(item, index) {
 
 .finding-item {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 0.9rem 1rem 0.9rem 1.05rem;
-  background: #fafbfc;
-  border-left: 4px solid #94a3b8;
-  transition: box-shadow 0.15s;
+  background: var(--surface-subtle);
+  border-left: 4px solid var(--border);
+  transition: all 0.15s;
 }
 
 .finding-item:hover {
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .finding-item--high {
   border-left-color: var(--high);
-  background: linear-gradient(90deg, #fef2f2 0%, #fafbfc 28%);
+  background: linear-gradient(90deg, var(--high-bg) 0%, var(--surface-subtle) 30%);
 }
 
 .finding-item--medium {
   border-left-color: var(--medium);
-  background: linear-gradient(90deg, #fffbeb 0%, #fafbfc 28%);
+  background: linear-gradient(90deg, var(--medium-bg) 0%, var(--surface-subtle) 30%);
 }
 
 .finding-item--low {
   border-left-color: var(--low);
-  background: linear-gradient(90deg, #ecfdf5 0%, #fafbfc 28%);
+  background: linear-gradient(90deg, var(--low-bg) 0%, var(--surface-subtle) 30%);
 }
 
 .finding-head {
@@ -348,8 +351,9 @@ function onProposeFix(item, index) {
   flex-shrink: 0;
   width: 1.35rem;
   height: 1.35rem;
-  border-radius: 6px;
-  background: #e2e8f0;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 700;
@@ -361,9 +365,10 @@ function onProposeFix(item, index) {
 
 .finding-title {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   font-weight: 650;
   line-height: 1.4;
+  color: var(--text);
 }
 
 .head-actions {
@@ -375,17 +380,18 @@ function onProposeFix(item, index) {
 
 .toggle-btn {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
   color: var(--text-muted);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 0.15rem 0.45rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
+  transition: all 0.15s;
 }
 
 .toggle-btn:hover {
   color: var(--text);
-  border-color: #cbd5e1;
+  border-color: var(--border-hover);
 }
 
 .finding-body {
@@ -403,41 +409,42 @@ function onProposeFix(item, index) {
 }
 
 .loc-label {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-dim);
 }
 
 .loc-path {
   font-family: var(--mono);
-  font-size: 0.8rem;
-  background: #0f172a;
-  color: #e2e8f0;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
+  font-size: 0.78rem;
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
   word-break: break-all;
 }
 
 .block {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
 }
 
 .block.evidence {
-  background: #f8fafc;
+  background: var(--surface-subtle);
 }
 
 .block.action {
   background: var(--primary-soft);
-  border-color: #bfdbfe;
+  border-color: var(--border-hover);
 }
 
 .block-label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-dim);
   letter-spacing: 0.03em;
   text-transform: uppercase;
   margin-bottom: 0.25rem;
@@ -449,7 +456,7 @@ function onProposeFix(item, index) {
 
 .block-text {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   line-height: 1.55;
   white-space: pre-wrap;
   color: var(--text);
@@ -459,25 +466,28 @@ function onProposeFix(item, index) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
-  margin-top: 0.15rem;
+  margin-top: 0.25rem;
 }
 
 .fix-btn {
-  border: 1px solid #bfdbfe;
-  background: var(--primary-soft);
-  color: var(--primary);
-  border-radius: 8px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.82rem;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.95rem;
+  font-size: 0.8rem;
   font-weight: 650;
+  box-shadow: 0 2px 10px var(--primary-glow);
+  transition: all 0.15s;
 }
 
 .fix-btn:hover:not(:disabled) {
-  background: #dbeafe;
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .fix-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 </style>

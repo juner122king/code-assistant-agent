@@ -4,12 +4,123 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 from app.repo.base import FileReadResult, RepoBackend, RepoMeta
 
 logger = logging.getLogger(__name__)
+
+
+def list_git_branches(root: Union[str, Path]) -> Tuple[Optional[str], List[str]]:
+    """检测本地目录是否为 git 仓库，并获取当前活跃分支及所有可用分支列表。
+
+    返回: (current_branch, [all_branches])
+    若非 git 目录，返回 (None, [])。
+    """
+    try:
+        p = Path(root).expanduser().resolve()
+        if not p.is_dir():
+            return None, []
+        git_target = p / ".git"
+        if not git_target.exists():
+            return None, []
+
+        head_file: Optional[Path] = None
+        git_dir: Optional[Path] = None
+        if git_target.is_dir():
+            git_dir = git_target
+            head_file = git_target / "HEAD"
+        elif git_target.is_file():
+            content = git_target.read_text(encoding="utf-8", errors="ignore").strip()
+            if content.startswith("gitdir:"):
+                raw_dir = content.split(":", 1)[1].strip()
+                git_dir = (p / raw_dir).resolve()
+                head_file = git_dir / "HEAD"
+
+        current_branch: Optional[str] = None
+        if head_file and head_file.is_file():
+            head_content = head_file.read_text(encoding="utf-8", errors="ignore").strip()
+            if head_content.startswith("ref: refs/heads/"):
+                current_branch = head_content[len("ref: refs/heads/"):].strip()
+            elif head_content.startswith("ref:"):
+                current_branch = head_content.split("/")[-1].strip()
+
+        branch_set = set()
+        if current_branch:
+            branch_set.add(current_branch)
+
+        if git_dir and git_dir.is_dir():
+            heads_dir = git_dir / "refs" / "heads"
+            if heads_dir.is_dir():
+                for f in heads_dir.rglob("*"):
+                    if f.is_file():
+                        rel = str(f.relative_to(heads_dir)).replace("\\", "/")
+                        if rel and rel not in ("origin", "upstream", "HEAD"):
+                            branch_set.add(rel)
+
+            remotes_dir = git_dir / "refs" / "remotes"
+            if remotes_dir.is_dir():
+                for remote in remotes_dir.iterdir():
+                    if remote.is_dir():
+                        for f in remote.rglob("*"):
+                            if f.is_file():
+                                b_name = str(f.relative_to(remote)).replace("\\", "/")
+                                if b_name and b_name not in ("origin", "upstream", "HEAD") and not b_name.endswith("/HEAD"):
+                                    branch_set.add(b_name)
+
+            packed = git_dir / "packed-refs"
+            if packed.is_file():
+                for line in packed.read_text(encoding="utf-8", errors="ignore").splitlines():
+                    line = line.strip()
+                    if line and not line.startswith(("#", "^")):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            ref = parts[1]
+                            if ref.startswith("refs/heads/"):
+                                b = ref[len("refs/heads/"):]
+                                if b and b not in ("origin", "upstream", "HEAD"):
+                                    branch_set.add(b)
+                            elif ref.startswith("refs/remotes/"):
+                                r_parts = ref[len("refs/remotes/"):].split("/", 1)
+                                if len(r_parts) == 2 and r_parts[1] not in ("origin", "upstream", "HEAD") and not r_parts[1].endswith("/HEAD"):
+                                    branch_set.add(r_parts[1])
+
+        res = subprocess.run(
+            ["git", "-C", str(p), "branch", "-a", "--format=%(refname:short)"],
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+            check=False,
+        )
+        if res.returncode == 0:
+            for line in res.stdout.splitlines():
+                b = line.strip()
+                if not b or b.startswith("(") or b in ("origin", "upstream", "HEAD") or "/HEAD" in b:
+                    continue
+                if b.startswith("origin/"):
+                    b = b[len("origin/"):]
+                branch_set.add(b)
+
+        all_branches = sorted(branch_set)
+        if current_branch and current_branch in all_branches:
+            all_branches.remove(current_branch)
+            all_branches.insert(0, current_branch)
+        elif not current_branch and all_branches:
+            current_branch = all_branches[0]
+
+        return current_branch, all_branches
+    except Exception:
+        pass
+
+    return None, []
+
+
+def detect_git_branch(root: Union[str, Path]) -> Optional[str]:
+    """检测本地目录是否为 git 仓库，并获取当前所在分支名称。若非 git 目录则返回 None。"""
+    curr, _ = list_git_branches(root)
+    return curr
 
 # 跳过常见噪音目录
 SKIP_DIRS = {
@@ -54,11 +165,15 @@ class LocalFsBackend(RepoBackend):
             (self.root / name).is_file()
             for name in ("README.md", "README.rst", "README.txt", "README")
         )
+        branch = detect_git_branch(self.root)
+        extra = {"root": str(self.root)}
+        if branch:
+            extra["git_branch"] = branch
         return RepoMeta(
             source="local",
             identifier=str(self.root),
             has_readme=has_readme,
-            extra={"root": str(self.root)},
+            extra=extra,
         )
 
     def list_tree(

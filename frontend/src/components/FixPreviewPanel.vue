@@ -219,30 +219,34 @@ async function onOpenPr() {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 600;
+  color: var(--text-dim);
+  font-weight: 650;
 }
 
 .panel-title {
   margin: 0;
   font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .close-btn,
 .ghost-btn {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface-subtle);
   color: var(--text-muted);
-  border-radius: 8px;
-  padding: 0.35rem 0.65rem;
-  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  transition: all 0.15s;
 }
 
 .close-btn:hover,
 .ghost-btn:hover {
-  color: var(--primary);
-  border-color: #bfdbfe;
+  color: var(--text);
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
 }
 
 .loading-block {
@@ -256,7 +260,7 @@ async function onOpenPr() {
 .spinner {
   width: 1.1rem;
   height: 1.1rem;
-  border: 2px solid #bfdbfe;
+  border: 2px solid var(--border);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -278,23 +282,24 @@ async function onOpenPr() {
 
 .fix-id {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--text-dim);
+  font-family: var(--mono);
   word-break: break-all;
 }
 
 .bug-box,
 .summary-box {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0.55rem 0.7rem;
-  background: #f8fafc;
+  background: var(--surface-subtle);
   margin-bottom: 0.65rem;
 }
 
 .block-label {
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin-bottom: 0.2rem;
@@ -303,6 +308,8 @@ async function onOpenPr() {
 .bug-title {
   margin: 0;
   font-weight: 650;
+  color: var(--text);
+  font-size: 0.9rem;
 }
 
 .bug-loc {
@@ -310,18 +317,20 @@ async function onOpenPr() {
 }
 
 .bug-loc code {
-  font-size: 0.78rem;
-  background: #0f172a;
-  color: #e2e8f0;
+  font-size: 0.76rem;
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--border);
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
 }
 
 .summary-text {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   line-height: 1.55;
   white-space: pre-wrap;
+  color: var(--text);
 }
 
 .changes-head {
@@ -333,7 +342,9 @@ async function onOpenPr() {
 
 .changes-head h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--text);
 }
 
 .count {
@@ -341,8 +352,9 @@ async function onOpenPr() {
   min-width: 1.3rem;
   padding: 0 0.35rem;
   border-radius: 999px;
-  background: #e2e8f0;
-  font-size: 0.75rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-muted);
 }
@@ -355,9 +367,9 @@ async function onOpenPr() {
 
 .change-item {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  background: #0f172a;
+  background: var(--surface-subtle);
 }
 
 .change-head {
@@ -366,41 +378,50 @@ async function onOpenPr() {
   align-items: center;
   gap: 0.45rem;
   padding: 0.45rem 0.6rem;
-  background: #1e293b;
+  background: var(--surface);
   border: none;
-  color: #e2e8f0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
   text-align: left;
   cursor: pointer;
+  transition: background 0.15s;
+}
+
+.change-head:hover {
+  background: var(--surface-hover);
 }
 
 .action-tag {
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #93c5fd;
+  color: var(--primary);
   flex-shrink: 0;
 }
 
 .path {
   flex: 1;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  font-family: var(--mono);
+  color: var(--text);
   word-break: break-all;
 }
 
 .chev {
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .diff {
   margin: 0;
-  padding: 0.6rem 0.75rem 0.75rem;
+  padding: 0.6rem 0.75rem;
   font-family: var(--mono);
   font-size: 0.75rem;
-  line-height: 1.45;
-  color: #cbd5e1;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--surface-subtle);
   overflow-x: auto;
   white-space: pre;
-  max-height: 280px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
@@ -414,27 +435,30 @@ async function onOpenPr() {
 
 .primary-btn {
   border: none;
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--low), #059669);
   color: #fff;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0.5rem 1rem;
   font-weight: 650;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+  transition: all 0.15s;
 }
 
 .primary-btn:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .primary-btn:not(:disabled):hover {
+  transform: translateY(-1px);
   filter: brightness(1.05);
 }
 
 .hint,
 .action-msg,
 .empty-hint {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   margin: 0.35rem 0 0;
 }

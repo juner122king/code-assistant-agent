@@ -185,10 +185,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-top: 1rem;
 }
 
-/* 使用 gap 控制间距，取消全局 .card+.card 叠加 margin */
 .report :deep(.card + .card) {
   margin-top: 0;
 }
@@ -199,8 +197,10 @@ onUnmounted(() => {
 
 .report-hero {
   background:
-    radial-gradient(1200px 200px at 10% -40%, rgba(37, 99, 235, 0.12), transparent),
+    radial-gradient(1200px 200px at 10% -40%, var(--primary-soft), transparent),
     var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .hero-top {
@@ -212,30 +212,31 @@ onUnmounted(() => {
 
 .eyebrow {
   margin: 0 0 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 600;
+  color: var(--text-dim);
+  font-weight: 650;
 }
 
 .hero-title {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+  color: var(--text);
 }
 
 .done-pill {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--low);
   background: var(--low-bg);
-  border: 1px solid #a7f3d0;
+  border: 1px solid var(--low-border);
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   letter-spacing: 0.02em;
@@ -244,16 +245,17 @@ onUnmounted(() => {
 .copy-btn {
   flex-shrink: 0;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface-subtle);
   color: var(--text-muted);
-  border-radius: 8px;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  transition: all 0.15s;
 }
 
 .copy-btn:hover {
-  border-color: #bfdbfe;
+  border-color: var(--primary);
   color: var(--primary);
   background: var(--primary-soft);
 }
@@ -267,14 +269,14 @@ onUnmounted(() => {
 }
 
 .repo-label {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-dim);
 }
 
 .repo-name {
   font-family: var(--mono);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--text);
   word-break: break-all;
@@ -299,17 +301,17 @@ onUnmounted(() => {
 
 .report-nav {
   position: sticky;
-  top: 0.5rem;
+  top: 3.5rem;
   z-index: 20;
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.4rem;
+  gap: 0.35rem;
   overflow-x: auto;
-  padding: 0.45rem;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
+  padding: 0.35rem;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
   -webkit-overflow-scrolling: touch;
 }
@@ -320,19 +322,21 @@ onUnmounted(() => {
   background: transparent;
   color: var(--text-muted);
   border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.82rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
   font-weight: 600;
   white-space: nowrap;
+  transition: all 0.15s;
 }
 
 .nav-pill:hover {
-  background: #f1f5f9;
+  background: var(--surface-hover);
   color: var(--text);
 }
 
 .nav-pill.active {
   background: var(--primary);
   color: #fff;
+  box-shadow: 0 2px 8px var(--primary-glow);
 }
 </style>

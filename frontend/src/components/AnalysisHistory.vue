@@ -99,7 +99,7 @@ const empty = computed(() => !props.loading && (!props.runs || props.runs.length
 
 <style scoped>
 .history {
-  margin-top: 1rem;
+  padding: 1rem 0.9rem;
 }
 
 .history-head {
@@ -114,9 +114,10 @@ const empty = computed(() => !props.loading && (!props.runs || props.runs.length
   min-width: 1.45rem;
   padding: 0 0.35rem;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   justify-content: center;
 }
@@ -125,7 +126,8 @@ const empty = computed(() => !props.loading && (!props.runs || props.runs.length
 .empty-hint {
   margin: 0 0 0.75rem;
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .run-list {
@@ -142,13 +144,20 @@ const empty = computed(() => !props.loading && (!props.runs || props.runs.length
   gap: 0.45rem;
   align-items: stretch;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #f8fafc;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  transition: all 0.15s;
+}
+
+.run-item:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
 }
 
 .run-item.selected {
-  border-color: #93c5fd;
+  border-color: var(--primary);
   background: var(--primary-soft);
+  box-shadow: 0 0 10px var(--primary-glow);
 }
 
 .run-main {
@@ -156,7 +165,7 @@ const empty = computed(() => !props.loading && (!props.runs || props.runs.length
   text-align: left;
   border: 0;
   background: transparent;
-  padding: 0.7rem 0.8rem;
+  padding: 0.6rem 0.75rem;
   min-width: 0;
 }
 
@@ -169,7 +178,9 @@ const empty = computed(() => !props.loading && (!props.runs || props.runs.length
 
 .repo {
   font-weight: 650;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
+  color: var(--text);
+  font-family: var(--mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -177,42 +188,50 @@ const empty = computed(() => !props.loading && (!props.runs || props.runs.length
 
 .badge {
   flex-shrink: 0;
-  background: #e2e8f0;
-  color: #475569;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
 }
 
 .badge.st-done {
   background: var(--low-bg);
   color: var(--low);
+  border-color: var(--low-border);
 }
 
 .badge.st-error {
   background: var(--danger-soft);
   color: var(--danger);
+  border-color: var(--danger-border);
 }
 
 .badge.st-running {
   background: var(--primary-soft);
   color: var(--primary);
+  border-color: var(--border-hover);
 }
 
 .run-meta,
 .run-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 0.75rem;
+  gap: 0.35rem 0.65rem;
   margin-top: 0.28rem;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }
 
 .run-del {
   border: 0;
   border-left: 1px solid var(--border);
   background: transparent;
-  color: var(--text-muted);
-  padding: 0 0.7rem;
-  font-size: 0.78rem;
+  color: var(--text-dim);
+  padding: 0 0.65rem;
+  font-size: 0.75rem;
+  transition: all 0.15s;
 }
 
 .run-del:hover:not(:disabled) {
@@ -221,7 +240,7 @@ const empty = computed(() => !props.loading && (!props.runs || props.runs.length
 }
 
 .run-del:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 </style>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any, Dict, Iterator, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -30,11 +31,37 @@ from app.models.responses import (
     FixProposal,
 )
 from app.repo.github_client import GitHubBackend
-from app.repo.local_fs import LocalFsBackend
+from app.repo.local_fs import LocalFsBackend, detect_git_branch, list_git_branches
 from app.repo.resolver import resolve_repo
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+@router.get("/repo/branch")
+def repo_branch(repo: str) -> dict:
+    """自动检测本地目录的当前 git 分支与所有可用分支列表。非 git 目录或远端返回 is_git=False, branch=None, branches=[]。"""
+    raw = (repo or "").strip()
+    if not raw:
+        return {"is_git": False, "branch": None, "branches": []}
+
+    # 排除显式的 GitHub 仓库或简写
+    if "github.com/" in raw.lower() or (
+        raw.count("/") == 1 and not raw.startswith(".") and not Path(raw).exists()
+    ):
+        return {"is_git": False, "branch": None, "branches": []}
+
+    try:
+        path = Path(raw).expanduser()
+        if not path.exists() or not path.is_dir():
+            return {"is_git": False, "branch": None, "branches": []}
+        curr_branch, branches = list_git_branches(path)
+        if curr_branch or branches:
+            return {"is_git": True, "branch": curr_branch, "branches": branches}
+    except Exception:
+        pass
+
+    return {"is_git": False, "branch": None, "branches": []}
 
 
 @router.get("/health")
